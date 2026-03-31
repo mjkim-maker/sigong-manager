@@ -382,8 +382,42 @@ function render(p){
                 <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #E5E8EB;font-size:13px"><span style="color:#8B95A1">연락처</span><span style="font-weight:600">${priv.showCustomerPhone?'010-1234-5678':'010-****-5678'}</span></div>
                 <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px"><span style="color:#8B95A1">전화 버튼</span><span style="font-weight:600">${priv.showCustomerPhone?'<span class="tag tag-green">활성</span>':'<span class="tag tag-gray">비활성 (🔒 비공개)</span>'}</span></div>
             </div>
+        </div>
+        <div class="card">
+            <div class="card-h"><div class="card-t">외부 체크리스트 연동</div></div>
+            <div style="font-size:12px;color:#6B7684;margin-bottom:16px;line-height:1.6">카테고리별 실측/시공 체크리스트 URL을 등록하면 시공자 앱과 시공 상세에서 바로 열 수 있습니다.</div>
+            <div id="checklistSettings"></div>
         </div>`;
+        // 체크리스트 URL 렌더
+        renderChecklistSettings();
     }
+}
+function renderChecklistSettings(){
+    const comp=DB.getById('companies',cid);
+    const checklists=comp?.checklists||{};
+    const cats=comp?.cats||[];
+    let h='';
+    cats.forEach(cat=>{
+        const url=checklists[cat]||'';
+        h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span class="tag tag-blue" style="min-width:60px;text-align:center">${cat}</span>
+            <input type="text" class="form-input" style="flex:1" id="cl_${cat}" value="${url}" placeholder="Google Sheets 또는 Apps Script 웹앱 URL 입력">
+            <button class="btn btn-primary btn-sm" onclick="saveChecklist('${cat}')">저장</button>
+        </div>`;
+    });
+    h+=`<div style="margin-top:12px;padding:12px;background:#F0F7FF;border:1px solid #B8D8FF;border-radius:8px;font-size:12px;color:#1A5DAB;line-height:1.6">
+        ℹ️ Google Sheets URL 또는 Apps Script 배포 URL을 입력하세요.<br>
+        시공자 앱 시공 상세 화면에 <strong>"실측 체크리스트 열기"</strong> 버튼이 표시됩니다.
+    </div>`;
+    document.getElementById('checklistSettings').innerHTML=h;
+}
+function saveChecklist(cat){
+    const url=document.getElementById('cl_'+cat).value.trim();
+    const comp=DB.getById('companies',cid);
+    const checklists=comp?.checklists||{};
+    checklists[cat]=url;
+    DB.update('companies',cid,{checklists});
+    showToast(cat+' 체크리스트 URL이 저장되었습니다');
 }
 function savePrivacy(){
     const name=document.getElementById('privName').checked;

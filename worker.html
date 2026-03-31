@@ -535,6 +535,16 @@ function openDetail(jobId) {
             : `<div style="margin-top:8px;text-align:center;padding:8px;color:#8B95A1;font-size:12px;background:#F7F8FA;border-radius:8px">🔒 고객 연락처가 비공개 설정되어 있습니다</div>`}
     </div>`;
 
+    // 체크리스트 버튼
+    const comp = DB.getById('companies', j.companyId);
+    const checklistUrl = comp?.checklists?.[j.cat];
+    if (checklistUrl) {
+        html += `<div class="detail-section" style="border-color:#35C5F0">
+            <div class="detail-section-title">📋 실측 체크리스트</div>
+            <button class="job-btn job-btn-primary" style="width:100%;padding:14px" onclick="window.open('${checklistUrl}','_blank')">📋 ${j.cat} 실측 체크리스트 열기</button>
+        </div>`;
+    }
+
     // 오더 정보
     let srcText = j.source === 'api' ? `오늘의집 API · ${j.extId || ''}` : '자체 등록';
     html += `<div class="detail-section">
