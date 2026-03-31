@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시공관리 — 오늘의집 관리자</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Pretendard',-apple-system,sans-serif;background:#f5f6f8;color:#191F28;min-height:100vh;display:flex}
+        .sidebar{width:220px;background:#1B1D1F;min-height:100vh;position:fixed;left:0;top:0;z-index:100;display:flex;flex-direction:column}
+        .sidebar-logo{padding:24px 20px 8px;display:flex;align-items:center;gap:10px}
+        .sidebar-logo .icon{width:32px;height:32px;background:#35C5F0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff}
+        .sidebar-logo .text{font-size:15px;font-weight:700;color:#fff}
+        .sidebar-company{padding:8px 20px 16px;font-size:12px;color:#35C5F0;font-weight:500;border-bottom:1px solid rgba(255,255,255,.06)}
+        .sidebar-nav{flex:1;padding:12px 10px;overflow-y:auto}
+        .nav-group{font-size:10px;font-weight:600;color:#4E5968;padding:14px 10px 4px;letter-spacing:.5px}
+        .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:500;color:#8B95A1;cursor:pointer;margin-bottom:1px;transition:all .15s}
+        .nav-item:hover{background:rgba(255,255,255,.06);color:#D1D6DB}
+        .nav-item.active{background:rgba(53,197,240,.12);color:#35C5F0;font-weight:600}
+        .nav-item .ico{width:18px;text-align:center;font-size:13px}
+        .nav-item .badge{margin-left:auto;background:#F04452;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px}
+        .sidebar-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:#4E5968}
+        .main-wrap{margin-left:220px;flex:1;min-height:100vh}
+        .top-bar{background:#fff;border-bottom:1px solid #E5E8EB;padding:0 28px;height:52px;display:flex;align-items:center;position:sticky;top:0;z-index:50}
+        .top-bar-title{font-size:16px;font-weight:700}
+        .top-bar-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+        .avatar{width:28px;height:28px;border-radius:50%;background:#35C5F0;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+        .content{padding:24px 28px;max-width:1400px}
+        .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+        .kpi{background:#fff;border-radius:12px;padding:18px 20px;border:1px solid #E5E8EB}
+        .kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+        .kpi-label{font-size:12px;color:#6B7684;font-weight:500}
+        .kpi-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px}
+        .kpi-value{font-size:26px;font-weight:700;margin-bottom:3px}.kpi-value span{font-size:13px;color:#8B95A1;font-weight:400}
+        .kpi-sub{font-size:11px;color:#8B95A1;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+        .up{color:#00B140;font-weight:600}.down{color:#F04452;font-weight:600}.warn{color:#FF7E36;font-weight:600}
+        .card{background:#fff;border-radius:12px;border:1px solid #E5E8EB;padding:20px;margin-bottom:14px}
+        .card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+        .card-t{font-size:14px;font-weight:600}.card-sub{font-size:11px;color:#8B95A1;background:#F2F4F6;padding:3px 10px;border-radius:5px}
+        .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+        .grid-6-4{display:grid;grid-template-columns:6fr 4fr;gap:14px;margin-bottom:14px}
+        .chart-box{position:relative;height:280px}.chart-box.sm{height:220px}
+        .tbl{width:100%;border-collapse:collapse;font-size:12px}
+        .tbl th{text-align:left;padding:9px 10px;font-weight:600;color:#6B7684;border-bottom:2px solid #E5E8EB;font-size:11px;background:#FAFBFC;white-space:nowrap}
+        .tbl td{padding:9px 10px;border-bottom:1px solid #F2F4F6}.tbl tr:hover td{background:#F7F8FA}
+        .tbl .r{text-align:right;font-variant-numeric:tabular-nums}
+        .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap}
+        .tag-blue{background:#E8F4FD;color:#0077B6}.tag-green{background:#E8F8EF;color:#00875A}
+        .tag-orange{background:#FFF3E8;color:#D46B08}.tag-red{background:#FFEEF0;color:#F04452}
+        .tag-purple{background:#F3EAFF;color:#6B21A8}.tag-gray{background:#F2F4F6;color:#6B7684}
+        .tag-cyan{background:#E0F7FA;color:#00838F}
+        .source-api{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:#E0F7FA;color:#00838F}
+        .stars{color:#FFB800}.stars .empty{color:#E5E8EB}
+        .alert-banner{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;margin-bottom:8px;font-size:12px}
+        .alert-banner.warning{background:#FFF8E8;border:1px solid #FFE0A0;color:#8B6914}
+        .alert-banner.danger{background:#FFF0F0;border:1px solid #FFD6DA;color:#C41E3A}
+        .alert-banner.info{background:#F0F7FF;border:1px solid #B8D8FF;color:#1A5DAB}
+        .alert-icon{font-size:16px;flex-shrink:0}.alert-text{flex:1}.alert-text strong{font-weight:700}
+        .cal-wrap{background:#fff;border-radius:12px;border:1px solid #E5E8EB;padding:20px;margin-bottom:14px}
+        .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+        .cal-title{font-size:15px;font-weight:700}
+        .cal-nav{display:flex;gap:6px}
+        .cal-nav button{width:30px;height:30px;border-radius:8px;border:1px solid #E5E8EB;background:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+        .cal-nav button:hover{border-color:#35C5F0;color:#35C5F0}
+        .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+        .cal-dow{font-size:10px;color:#8B95A1;font-weight:600;padding:6px 0}
+        .cal-cell{padding:6px 2px;border-radius:8px;cursor:pointer;min-height:64px;font-size:12px;transition:background .1s}
+        .cal-cell:hover{background:#F7F8FA}.cal-cell.today{background:#E8F4FD}.cal-cell.selected{background:#35C5F0;color:#fff}
+        .cal-cell.selected .cal-count{color:#fff}.cal-cell.other{color:#D1D6DB}
+        .cal-cell .cal-num{font-weight:600;margin-bottom:2px}
+        .cal-cell .cal-dots{display:flex;justify-content:center;gap:3px;margin-top:2px}
+        .cal-dot-job{width:5px;height:5px;border-radius:50%;background:#35C5F0}
+        .cal-dot-as{width:5px;height:5px;border-radius:50%;background:#F04452}
+        .cal-count{font-size:10px;color:#6B7684;margin-top:1px}
+        .cal-legend{display:flex;gap:16px;font-size:11px;color:#8B95A1}
+        .cal-legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}
+        .day-detail{background:#fff;border-radius:12px;border:1px solid #E5E8EB;padding:20px}
+        .day-detail-title{font-size:14px;font-weight:700;margin-bottom:12px}
+        .day-job{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F2F4F6}
+        .day-job:last-child{border-bottom:none}
+        .day-job-time{font-size:14px;font-weight:700;width:50px;flex-shrink:0}
+        .day-job-info{flex:1}.day-job-title{font-size:12px;font-weight:600;margin-bottom:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+        .day-job-desc{font-size:11px;color:#6B7684}.day-job-status{flex-shrink:0}
+        .login-wrap{position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f6f8;z-index:300;display:flex;align-items:center;justify-content:center}
+        .login-wrap.hide{display:none}
+        .login-box{background:#fff;border-radius:20px;padding:48px 40px;width:420px;box-shadow:0 8px 40px rgba(0,0,0,.08);text-align:center}
+        .login-logo2{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px}
+        .login-logo2 .icon{width:40px;height:40px;background:#35C5F0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff}
+        .login-logo2 .text{font-size:20px;font-weight:700}
+        .login-sub{font-size:13px;color:#8B95A1;margin-bottom:32px}
+        .login-form .form-group{text-align:left;margin-bottom:16px}
+        .form-label{display:block;font-size:12px;font-weight:600;color:#4E5968;margin-bottom:5px}
+        .form-input{width:100%;padding:9px 12px;border:1px solid #D1D6DB;border-radius:8px;font-size:13px;font-family:inherit;outline:none}
+        .form-input:focus{border-color:#35C5F0}
+        .login-btn{width:100%;padding:12px;border:none;border-radius:10px;background:#35C5F0;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:8px}
+        .login-error{color:#F04452;font-size:12px;text-align:center;margin-top:10px;min-height:16px}
+        .login-accounts{margin-top:16px;padding:12px;background:#F7F8FA;border-radius:10px;font-size:11px;color:#6B7684;text-align:left}
+        @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid-2,.grid-6-4{grid-template-columns:1fr}}
+        @media(max-width:768px){.sidebar{display:none}.main-wrap{margin-left:0}}
+    </style>
+</head>
+<body>
+
+<div class="login-wrap" id="loginScreen">
+    <div class="login-box">
+        <div class="login-logo2"><div class="icon">S</div><div class="text">시공관리</div></div>
+        <div class="login-sub">오늘의집 관리자 포털</div>
+        <div class="login-form">
+            <div class="form-group"><label class="form-label">아이디</label><input type="text" class="form-input" id="loginId" placeholder="아이디"></div>
+            <div class="form-group"><label class="form-label">비밀번호</label><input type="password" class="form-input" id="loginPw" placeholder="비밀번호"></div>
+            <button class="login-btn" onclick="doLogin()">로그인</button>
+            <div class="login-error" id="loginError"></div>
+        </div>
+        <div class="login-accounts"><strong>테스트 계정</strong><div>admin / admin123</div></div>
+    </div>
+</div>
+
+<aside class="sidebar">
+    <div class="sidebar-logo"><div class="icon">S</div><div class="text">시공관리</div></div>
+    <div class="sidebar-company">오늘의집 관리자</div>
+    <nav class="sidebar-nav">
+        <div class="nav-group">Overview</div>
+        <div class="nav-item active" onclick="go('home',this)"><span class="ico">📊</span> 전체 대시보드</div>
+        <div class="nav-item" onclick="go('companies',this)"><span class="ico">🏢</span> 테크사 관리</div>
+        <div class="nav-item" onclick="go('category',this)"><span class="ico">📁</span> 카테고리별</div>
+        <div class="nav-item" onclick="go('as',this)"><span class="ico">🔧</span> AS 통합현황</div>
+        <div class="nav-item" onclick="go('alerts',this)"><span class="ico">🔔</span> 알림/이상감지</div>
+        <div class="nav-group">분석</div>
+        <div class="nav-item" onclick="go('performance',this)"><span class="ico">📈</span> 성과 분석</div>
+        <div class="nav-group">운영</div>
+        <div class="nav-item" onclick="go('accounts',this)"><span class="ico">🔐</span> 계정/권한</div>
+    </nav>
+    <div class="sidebar-footer">오늘의집 관리자 v2.2</div>
+</aside>
+
+<div class="main-wrap">
+    <header class="top-bar">
+        <div class="top-bar-title" id="pageTitle">전체 대시보드</div>
+        <div class="top-bar-right">
+            <div style="font-size:12px;color:#8B95A1">2026.03.31</div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="avatar">AD</div><span style="font-size:13px;font-weight:500;color:#4E5968">관리자</span></div>
+        </div>
+    </header>
+    <div class="content" id="contentArea"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="shared-data.js"></script>
+<script>
+const titles={home:'전체 대시보드',companies:'테크사 관리',category:'카테고리별 분석',as:'AS 통합현황',alerts:'알림/이상감지',performance:'성과 분석',accounts:'계정/권한'};
+let charts={},calState={year:2026,month:2,selectedDate:'2026-03-31'},currentPage='home';
+
+// Firebase init
+DB.init();
+DB.seedIfEmpty();
+
+function doLogin(){
+    if(!DB._ready){document.getElementById('loginError').textContent='데이터 로딩중... 잠시 후 다시 시도';return}
+    const id=document.getElementById('loginId').value.trim(),pw=document.getElementById('loginPw').value.trim();
+    if(!id||!pw){document.getElementById('loginError').textContent='입력하세요';return}
+    const acc=DB.getAll('accounts').find(a=>a.loginId===id&&a.password===pw&&a.role==='admin');
+    if(!acc){document.getElementById('loginError').textContent='관리자 계정이 아니거나 정보가 올바르지 않습니다';return}
+    document.getElementById('loginScreen').classList.add('hide');
+    render('home');
+}
+function go(p,el){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));el.classList.add('active');render(p)}
+
+// Calendar
+function calHtml(jobs){
+    const{year,month}=calState,mStr=`${year}-${String(month+1).padStart(2,'0')}`,mJobs=jobs.filter(j=>j.date?.startsWith(mStr));
+    const first=new Date(year,month,1).getDay(),dim=new Date(year,month+1,0).getDate(),today=new Date(),isCur=today.getFullYear()===year&&today.getMonth()===month;
+    const mn=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    let cells='';['일','월','화','수','목','금','토'].forEach(d=>cells+=`<div class="cal-dow">${d}</div>`);
+    for(let i=0;i<first;i++)cells+='<div class="cal-cell other"></div>';
+    for(let d=1;d<=dim;d++){
+        const ds=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`,dj=mJobs.filter(j=>j.date===ds);
+        let cls='cal-cell';if(isCur&&d===today.getDate())cls+=' today';if(calState.selectedDate===ds)cls+=' selected';
+        let dots='';if(dj.some(j=>!j.isAS))dots+='<div class="cal-dot-job"></div>';if(dj.some(j=>j.isAS))dots+='<div class="cal-dot-as"></div>';
+        cells+=`<div class="${cls}" onclick="selDate('${ds}')"><div class="cal-num">${d}</div><div class="cal-dots">${dots}</div>${dj.length?`<div class="cal-count">${dj.length}건</div>`:''}</div>`;
+    }
+    return `<div class="cal-wrap"><div class="cal-head"><div class="cal-title">${year}년 ${mn[month]}</div><div style="display:flex;gap:8px;align-items:center"><div class="cal-legend"><span><div class="cal-legend-dot" style="background:#35C5F0"></div>시공</span><span><div class="cal-legend-dot" style="background:#F04452"></div>AS</span></div><div class="cal-nav"><button onclick="chMonth(-1)">◀</button><button onclick="chMonth(1)">▶</button></div></div></div><div class="cal-grid">${cells}</div></div>`;
+}
+function dayHtml(jobs,ds){
+    const dj=jobs.filter(j=>j.date===ds).sort((a,b)=>a.time.localeCompare(b.time));
+    const dow=['일','월','화','수','목','금','토'],dt=new Date(ds),label=`${dt.getMonth()+1}월 ${dt.getDate()}일 (${dow[dt.getDay()]})`;
+    if(!dj.length)return `<div class="day-detail"><div class="day-detail-title">${label}</div><div style="text-align:center;padding:24px;color:#ADB5BD;font-size:12px">일정 없음</div></div>`;
+    const done=dj.filter(j=>j.status==='done').length;
+    let h=dj.map(j=>{const w=DB.getById('workers',j.workerId),comp=DB.getById('companies',j.companyId);
+        let sc=j.status==='done'?'tag-green':j.status==='progress'?'tag-blue':'tag-gray',st=j.status==='done'?'완료':j.status==='progress'?'진행중':'대기';if(j.isAS){sc='tag-orange';st='AS';}
+        const p=j.photos||{before:0,during:0,after:0};let pi=(p.before||p.during||p.after)?`<span style="font-size:10px;color:#00875A;margin-left:6px">📸${p.before+p.during+p.after}</span>`:'';
+        return `<div class="day-job"><div class="day-job-time">${j.time}</div><div class="day-job-info"><div class="day-job-title"><span class="tag tag-blue">${j.cat}</span> <span class="tag tag-gray">${comp?.name||'—'}</span> ${w?.name||''} ${j.source==='api'?'<span class="source-api">API</span>':''}${pi}</div><div class="day-job-desc">${j.customer} · ${j.addr}</div></div><div class="day-job-status"><span class="tag ${sc}">${st}</span></div></div>`;
+    }).join('');
+    return `<div class="day-detail"><div class="day-detail-title">${label} — 전체 ${dj.length}건 (완료 ${done})</div>${h}</div>`;
+}
+function chMonth(d){calState.month+=d;if(calState.month>11){calState.month=0;calState.year++}if(calState.month<0){calState.month=11;calState.year--}calState.selectedDate=null;render(currentPage)}
+function selDate(ds){calState.selectedDate=ds;render(currentPage)}
+
+function render(p){
+    currentPage=p;document.getElementById('pageTitle').textContent=titles[p]||'';Object.values(charts).forEach(c=>c.destroy());charts={};
+    const area=document.getElementById('contentArea'),allJobs=DB.getAll('jobs'),companies=DB.getAll('companies'),workers=DB.getAll('workers');
+    const stats=HELPERS.totalStats();
+
+    if(p==='home'){
+        let compRows=companies.map(c=>{const cs=HELPERS.companyStats(c.id);return `<tr><td style="font-weight:600">${c.name}</td><td><span class="tag tag-gray">${c.region}</span></td><td class="r">${cs.workerCount}명</td><td>${c.cats.map(ct=>`<span class="tag tag-blue" style="margin:1px">${ct}</span>`).join('')}</td><td class="r">${cs.monthlyJobs}</td><td class="r"><span class="${HELPERS.rateClass(cs.rate)}">${cs.rate}%</span></td><td class="r"><span class="${HELPERS.asRateClass(cs.asRate)}">${cs.asRate}%</span></td></tr>`}).join('');
+        area.innerHTML=`<div class="kpi-grid">
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">등록 테크사</div><div class="kpi-icon" style="background:#E8F4FD;color:#0077B6">🏢</div></div><div class="kpi-value">${stats.companyCount} <span>개사</span></div><div class="kpi-sub">활성 <span class="up">${stats.activeCompanies}</span></div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">전체 시공자</div><div class="kpi-icon" style="background:#E8F8EF;color:#00875A">👷</div></div><div class="kpi-value">${stats.workerCount} <span>명</span></div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">이번달 시공</div><div class="kpi-icon" style="background:#FFF3E8;color:#D46B08">📋</div></div><div class="kpi-value">${stats.monthlyJobs} <span>건</span></div><div class="kpi-sub">자체 ${stats.selfCount} · <span style="color:#00838F;font-weight:600">API ${stats.apiCount}</span></div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">평균 완료율</div><div class="kpi-icon" style="background:#F3EAFF;color:#6B21A8">✅</div></div><div class="kpi-value">${stats.rate} <span>%</span></div><div class="kpi-sub">AS 미처리 <span class="down">${stats.asOpen}</span></div></div>
+        </div>
+        <div class="grid-6-4">${calHtml(allJobs)}<div>${dayHtml(allJobs,calState.selectedDate||'2026-03-31')}</div></div>
+        <div class="grid-2">
+            <div class="card"><div class="card-h"><div class="card-t">카테고리별 시공 비중</div></div><div class="chart-box"><canvas id="catPie"></canvas></div></div>
+            <div class="card"><div class="card-h"><div class="card-t">카테고리별 시공 건수</div></div><div class="chart-box"><canvas id="catBar"></canvas></div></div>
+        </div>
+        <div class="card"><div class="card-h"><div class="card-t">테크사별 현황</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>테크사</th><th>지역</th><th>시공자</th><th>카테고리</th><th class="r">시공</th><th class="r">완료율</th><th class="r">AS율</th></tr></thead><tbody>${compRows}</tbody></table></div></div>`;
+        // Charts
+        const mJobs=allJobs.filter(j=>j.date?.startsWith('2026-03')),cats={};mJobs.forEach(j=>{cats[j.cat]=(cats[j.cat]||0)+1});
+        const cl=Object.keys(cats).sort((a,b)=>cats[b]-cats[a]),cd=cl.map(l=>cats[l]),co=['#1e40af','#2563eb','#3b82f6','#60a5fa','#0ea5e9','#38bdf8','#7dd3fc','#93c5fd','#a5b4fc','#c4b5fd'];
+        if(cl.length){
+            charts.pie=new Chart(document.getElementById('catPie'),{type:'doughnut',data:{labels:cl,datasets:[{data:cd,backgroundColor:co.slice(0,cl.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'right',labels:{font:{size:11,family:'Pretendard'},padding:8,usePointStyle:true}}}}});
+            charts.bar=new Chart(document.getElementById('catBar'),{type:'bar',data:{labels:cl,datasets:[{data:cd,backgroundColor:co.slice(0,cl.length).map(c=>c+'cc'),borderColor:co.slice(0,cl.length),borderWidth:1,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#F2F4F6'}},y:{grid:{display:false},ticks:{font:{size:11,family:'Pretendard'}}}}}});
+        }
+    } else if(p==='companies'){
+        let rows=companies.map(c=>{const cs=HELPERS.companyStats(c.id);return `<tr><td style="font-weight:600">${c.name}</td><td>${c.ceo}</td><td><span class="tag tag-gray">${c.region}</span></td><td>${c.cats.map(ct=>`<span class="tag tag-blue" style="margin:1px">${ct}</span>`).join('')}</td><td class="r">${cs.workerCount}명</td><td class="r">${cs.monthlyJobs}</td><td class="r"><span class="${HELPERS.rateClass(cs.rate)}">${cs.rate}%</span></td><td class="r"><span class="${HELPERS.asRateClass(cs.asRate)}">${cs.asRate}%</span></td><td>${c.contractEnd}</td><td>${c.status==='active'?'<span class="tag tag-green">활성</span>':'<span class="tag tag-orange">비활성</span>'}</td></tr>`}).join('');
+        area.innerHTML=`<div class="card"><div class="card-h"><div class="card-t">테크사 목록 (${companies.length}개사)</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>테크사</th><th>대표</th><th>지역</th><th>카테고리</th><th class="r">시공자</th><th class="r">이번달</th><th class="r">완료율</th><th class="r">AS율</th><th>계약만료</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    } else if(p==='category'){
+        const mJobs=allJobs.filter(j=>j.date?.startsWith('2026-03')),cats={};mJobs.forEach(j=>{if(!cats[j.cat])cats[j.cat]={t:0,d:0};cats[j.cat].t++;if(j.status==='done')cats[j.cat].d++});
+        const as=DB.getAll('asTickets').filter(a=>a.date?.startsWith('2026-03')),asC={};as.forEach(a=>{asC[a.cat]=(asC[a.cat]||0)+1});
+        let rows=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([cat,v])=>{const r=v.t?Math.round(v.d/v.t*1000)/10:0,ac=asC[cat]||0,ar=v.t?Math.round(ac/v.t*1000)/10:0;
+            return `<tr><td><span class="tag tag-blue">${cat}</span></td><td class="r">${v.t}</td><td class="r">${v.d}</td><td class="r"><span class="${HELPERS.rateClass(r)}">${r}%</span></td><td class="r">${ac}</td><td class="r"><span class="${HELPERS.asRateClass(ar)}">${ar}%</span></td></tr>`}).join('');
+        area.innerHTML=`<div class="grid-2"><div class="card"><div class="card-h"><div class="card-t">카테고리별 비중</div></div><div class="chart-box"><canvas id="catPie2"></canvas></div></div><div class="card"><div class="card-h"><div class="card-t">카테고리별 비교</div></div><div class="chart-box"><canvas id="catBar2"></canvas></div></div></div>
+        <div class="card"><div class="card-h"><div class="card-t">카테고리별 상세</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>카테고리</th><th class="r">시공</th><th class="r">완료</th><th class="r">완료율</th><th class="r">AS</th><th class="r">AS율</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+        const cl=Object.keys(cats).sort((a,b)=>cats[b].t-cats[a].t),cd=cl.map(l=>cats[l].t),co=['#1e40af','#2563eb','#3b82f6','#60a5fa','#0ea5e9','#38bdf8','#7dd3fc','#93c5fd','#a5b4fc','#c4b5fd'];
+        if(cl.length){charts.p2=new Chart(document.getElementById('catPie2'),{type:'doughnut',data:{labels:cl,datasets:[{data:cd,backgroundColor:co.slice(0,cl.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'right',labels:{font:{size:11,family:'Pretendard'},padding:8,usePointStyle:true}}}}});
+            charts.b2=new Chart(document.getElementById('catBar2'),{type:'bar',data:{labels:cl,datasets:[{data:cd,backgroundColor:co.slice(0,cl.length).map(c=>c+'cc'),borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#F2F4F6'}},y:{grid:{display:false},ticks:{font:{size:11,family:'Pretendard'}}}}}});}
+    } else if(p==='as'){
+        const tickets=DB.getAll('asTickets').sort((a,b)=>b.date.localeCompare(a.date)),open=tickets.filter(a=>a.status==='open');
+        let rows=tickets.map(a=>{const comp=DB.getById('companies',a.companyId),w=DB.getById('workers',a.workerId);let sc=a.status==='open'?'tag-red':a.status==='in_progress'?'tag-orange':'tag-green',st=a.status==='open'?'미처리':a.status==='in_progress'?'처리중':'완료';
+            return `<tr><td style="font-family:monospace;font-size:11px">${a.id}</td><td>${HELPERS.formatDate(a.date)}</td><td style="font-weight:500">${comp?.name||'—'}</td><td><span class="tag tag-blue">${a.cat}</span></td><td><span class="tag tag-purple">${a.code}</span></td><td style="font-size:12px">${a.issue}</td><td>${w?.name||'—'}</td><td><span class="tag ${sc}">${st}</span></td></tr>`}).join('');
+        area.innerHTML=`<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)"><div class="kpi"><div class="kpi-top"><div class="kpi-label">전체 AS</div></div><div class="kpi-value">${tickets.length} <span>건</span></div></div><div class="kpi"><div class="kpi-top"><div class="kpi-label">미처리</div></div><div class="kpi-value down">${open.length} <span>건</span></div></div><div class="kpi"><div class="kpi-top"><div class="kpi-label">처리 완료</div></div><div class="kpi-value up">${tickets.filter(a=>a.status==='resolved').length} <span>건</span></div></div></div>
+        <div class="card"><div class="card-h"><div class="card-t">전체 AS 현황</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>AS번호</th><th>접수일</th><th>테크사</th><th>카테고리</th><th>코드</th><th>증상</th><th>담당</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    } else if(p==='alerts'){
+        let alerts=[];
+        companies.forEach(c=>{const cs=HELPERS.companyStats(c.id);if(cs.rate<85&&cs.monthlyJobs>0)alerts.push({t:'danger',i:'🚨',title:`${c.name} 완료율 ${cs.rate}%`,desc:`기준치(85%) 미달`});if(cs.asRate>7)alerts.push({t:'danger',i:'🚨',title:`${c.name} AS율 ${cs.asRate}%`,desc:`AS율 높음 — 점검 필요`})});
+        const cw=workers.filter(w=>w.certs?.some(c=>HELPERS.certStatus(c.expiry).days<30&&HELPERS.certStatus(c.expiry).days>=0));
+        if(cw.length)alerts.push({t:'warning',i:'⚠️',title:`자격증 만료 임박 ${cw.length}명`,desc:cw.map(w=>w.name).join(', ')});
+        companies.forEach(c=>{const d=Math.floor((new Date(c.contractEnd)-new Date())/(86400000));if(d>0&&d<60)alerts.push({t:'info',i:'ℹ️',title:`${c.name} 계약 만료 D-${d}`,desc:`${c.contractEnd} 만료 예정`})});
+        let ah=alerts.length?alerts.map(a=>`<div class="alert-banner ${a.t}"><div class="alert-icon">${a.i}</div><div class="alert-text"><strong>${a.title}</strong> — ${a.desc}</div></div>`).join(''):'<div style="text-align:center;padding:30px;color:#ADB5BD">이상 없음</div>';
+        area.innerHTML=`<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)"><div class="kpi"><div class="kpi-top"><div class="kpi-label">활성 알림</div><div class="kpi-icon" style="background:#FFEEF0;color:#F04452">🔔</div></div><div class="kpi-value">${alerts.length} <span>건</span></div></div><div class="kpi"><div class="kpi-top"><div class="kpi-label">자격증 만료임박</div></div><div class="kpi-value">${cw.length} <span>명</span></div></div><div class="kpi"><div class="kpi-top"><div class="kpi-label">위험</div></div><div class="kpi-value down">${alerts.filter(a=>a.t==='danger').length} <span>건</span></div></div></div>
+        <div class="card"><div class="card-h"><div class="card-t">이상 감지 알림</div></div>${ah}</div>`;
+    } else if(p==='performance'){
+        let rows=companies.map(c=>{const cs=HELPERS.companyStats(c.id);return `<tr><td style="font-weight:600">${c.name}</td><td class="r">${cs.monthlyJobs}</td><td class="r">${cs.monthlyDone}</td><td class="r"><span class="${HELPERS.rateClass(cs.rate)}">${cs.rate}%</span></td><td class="r">${cs.asTotal}</td><td class="r"><span class="${HELPERS.asRateClass(cs.asRate)}">${cs.asRate}%</span></td></tr>`}).join('');
+        area.innerHTML=`<div class="card"><div class="card-h"><div class="card-t">테크사 성과 비교</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>테크사</th><th class="r">시공</th><th class="r">완료</th><th class="r">완료율</th><th class="r">AS</th><th class="r">AS율</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    } else if(p==='accounts'){
+        const accs=DB.getAll('accounts');
+        let mRows=accs.filter(a=>a.role!=='worker').map(a=>{const comp=a.companyId?DB.getById('companies',a.companyId):null;let rt=a.role==='admin'?'<span class="tag tag-purple">관리자</span>':'<span class="tag tag-blue">테크사</span>';return `<tr><td>${comp?.name||'시스템'}</td><td>${a.loginId}</td><td>${a.name}</td><td>${rt}</td><td><span class="tag tag-green">활성</span></td></tr>`}).join('');
+        let wRows=accs.filter(a=>a.role==='worker').map(a=>{const comp=a.companyId?DB.getById('companies',a.companyId):null;return `<tr><td>${comp?.name||'—'}</td><td>${a.loginId}</td><td>${a.name}</td><td><span class="tag tag-gray">시공자</span></td><td><span class="tag tag-green">활성</span></td></tr>`}).join('');
+        area.innerHTML=`<div class="card"><div class="card-h"><div class="card-t">관리 계정</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>회사</th><th>아이디</th><th>이름</th><th>권한</th><th>상태</th></tr></thead><tbody>${mRows}</tbody></table></div></div>
+        <div class="card"><div class="card-h"><div class="card-t">시공자 계정</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>회사</th><th>아이디</th><th>이름</th><th>권한</th><th>상태</th></tr></thead><tbody>${wRows}</tbody></table></div></div>
+        <div class="card"><div class="card-h"><div class="card-t">권한 체계</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>권한</th><th>자사 데이터</th><th>타사 데이터</th><th>전체 통계</th><th>계정 관리</th></tr></thead><tbody><tr><td><span class="tag tag-purple">관리자</span></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr><tr><td><span class="tag tag-blue">테크사</span></td><td>✅</td><td>❌</td><td>❌</td><td>자사만</td></tr><tr><td><span class="tag tag-gray">시공자</span></td><td>본인만</td><td>❌</td><td>❌</td><td>❌</td></tr></tbody></table></div></div>`;
+    }
+}
+DB.listenSync(()=>{render(currentPage)});
+</script>
+</body>
+</html>

@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>시공관리 — 시공자 앱</title>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        body{font-family:'Pretendard',-apple-system,sans-serif;background:#f5f6f8;color:#191F28;max-width:430px;margin:0 auto;min-height:100vh;position:relative;overflow-x:hidden}
+
+        /* ── Login ── */
+        .login-screen{position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;max-width:430px;margin:0 auto}
+        .login-screen.hide{display:none}
+        .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+        .login-logo .icon{width:44px;height:44px;background:#35C5F0;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff}
+        .login-logo .text{font-size:22px;font-weight:700;color:#191F28}
+        .login-sub{font-size:13px;color:#8B95A1;margin-bottom:36px}
+        .login-form{width:100%;padding:0 32px}
+        .login-field{margin-bottom:16px}
+        .login-label{font-size:12px;font-weight:600;color:#4E5968;margin-bottom:6px;display:block}
+        .login-input{width:100%;padding:14px 16px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;color:#191F28;outline:none;transition:border .15s;background:#FAFBFC}
+        .login-input:focus{border-color:#35C5F0;background:#fff}
+        .login-btn{width:100%;padding:16px;border:none;border-radius:12px;background:#35C5F0;color:#fff;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:12px}
+        .login-btn:active{background:#20B2E0}
+        .login-error{color:#F04452;font-size:12px;text-align:center;margin-top:10px;min-height:16px}
+        .login-footer{margin-top:20px;font-size:11px;color:#ADB5BD;text-align:center}
+        .login-accounts{margin-top:16px;padding:16px;background:#F7F8FA;border-radius:12px;font-size:11px;color:#6B7684;width:calc(100% - 64px)}
+        .login-accounts div{padding:2px 0}
+
+        /* ── App Shell ── */
+        .app{display:none}.app.show{display:flex;flex-direction:column;min-height:100vh}
+        .header{background:#fff;padding:16px 20px 12px;border-bottom:1px solid #E5E8EB;position:sticky;top:0;z-index:50}
+        .header-top{display:flex;align-items:center;justify-content:space-between}
+        .header-user{display:flex;align-items:center;gap:10px}
+        .header-avatar{width:36px;height:36px;border-radius:50%;background:#35C5F0;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+        .header-name{font-size:15px;font-weight:700;color:#191F28}
+        .header-company{font-size:11px;color:#8B95A1}
+        .header-status{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer}
+        .header-status.on{background:#E8F8EF;color:#00875A}
+        .header-status.off{background:#F2F4F6;color:#8B95A1}
+        .app-content{flex:1;padding:16px 16px 80px}
+        .app-page{display:none}.app-page.active{display:block}
+
+        /* ── Today Card ── */
+        .today-card{background:linear-gradient(135deg,#35C5F0 0%,#1e90d0 100%);border-radius:16px;padding:20px;color:#fff;margin-bottom:16px}
+        .today-label{font-size:12px;opacity:.8;margin-bottom:4px}
+        .today-date{font-size:20px;font-weight:700;margin-bottom:12px}
+        .today-stats{display:flex;gap:16px}
+        .today-stat{text-align:center}
+        .today-stat-value{font-size:24px;font-weight:700}
+        .today-stat-label{font-size:10px;opacity:.8;margin-top:2px}
+
+        /* ── Job Card ── */
+        .job-card{background:#fff;border-radius:14px;border:1px solid #E5E8EB;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s}
+        .job-card:active{transform:scale(.98)}
+        .job-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+        .job-time{font-size:18px;font-weight:700;color:#191F28}
+        .job-type{font-size:12px;font-weight:500;color:#6B7684;margin-left:4px}
+        .tag{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600}
+        .tag-wait{background:#F2F4F6;color:#6B7684}
+        .tag-progress{background:#E8F4FD;color:#0077B6}
+        .tag-done{background:#E8F8EF;color:#00875A}
+        .tag-delay{background:#FFEEF0;color:#F04452}
+        .tag-as{background:#FFF3E8;color:#D46B08}
+        .tag-blue{background:#E8F4FD;color:#0077B6}
+        .tag-gray{background:#F2F4F6;color:#6B7684}
+        .source-api{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:#E0F7FA;color:#00838F;margin-left:4px}
+        .source-self{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:#F2F4F6;color:#8B95A1;margin-left:4px}
+        .job-info-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;font-size:13px}
+        .job-info-icon{width:18px;text-align:center;font-size:13px;flex-shrink:0}
+        .job-info-label{color:#8B95A1;font-size:11px;width:44px;flex-shrink:0}
+        .job-info-value{color:#191F28;font-weight:500;flex:1}
+        .job-actions{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #F2F4F6}
+        .job-btn{flex:1;padding:10px;border:none;border-radius:10px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;text-align:center}
+        .job-btn-primary{background:#35C5F0;color:#fff}
+        .job-btn-primary:active{background:#20B2E0}
+        .job-btn-outline{background:#fff;color:#4E5968;border:1.5px solid #D1D6DB}
+        .job-btn-green{background:#00B140;color:#fff}
+        .job-btn-green:active{background:#009B38}
+        .job-btn-disabled{background:#E5E8EB;color:#ADB5BD}
+
+        /* ── Calendar ── */
+        .cal-card{background:#fff;border-radius:14px;border:1px solid #E5E8EB;padding:16px;margin-bottom:14px}
+        .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+        .cal-month{font-size:16px;font-weight:700;color:#191F28}
+        .cal-nav{display:flex;gap:8px}
+        .cal-nav-btn{width:32px;height:32px;border-radius:8px;border:1px solid #E5E8EB;background:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+        .cal-nav-btn:active{background:#F2F4F6}
+        .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+        .cal-dow{font-size:10px;color:#8B95A1;font-weight:600;padding:6px 0}
+        .cal-day{padding:8px 2px;border-radius:8px;font-size:13px;position:relative;cursor:pointer;min-height:40px}
+        .cal-day:active{background:#F2F4F6}
+        .cal-day.today{background:#35C5F0;color:#fff;font-weight:700}
+        .cal-day.selected{background:#E8F4FD;font-weight:600;color:#0077B6}
+        .cal-day .dot-row{display:flex;justify-content:center;gap:2px;margin-top:2px;min-height:5px}
+        .cal-dot{width:4px;height:4px;border-radius:50%}
+        .cal-dot.job{background:#35C5F0}.cal-dot.as{background:#F04452}
+        .cal-day.today .cal-dot.job{background:#fff}
+        .cal-day.other{color:#D1D6DB}
+        .cal-legend{display:flex;gap:14px;margin-top:10px;padding-top:10px;border-top:1px solid #F2F4F6;font-size:11px;color:#8B95A1}
+
+        /* ── Detail Screen ── */
+        .detail-screen{position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f6f8;z-index:100;max-width:430px;margin:0 auto;overflow-y:auto;transform:translateX(100%);transition:transform .25s ease}
+        .detail-screen.show{transform:translateX(0)}
+        .detail-header{background:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #E5E8EB;position:sticky;top:0;z-index:10}
+        .detail-back{width:32px;height:32px;border-radius:8px;border:none;background:#F2F4F6;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+        .detail-back:active{background:#E5E8EB}
+        .detail-title{font-size:15px;font-weight:700;color:#191F28;flex:1}
+        .detail-body{padding:16px 16px 100px}
+        .detail-section{background:#fff;border-radius:14px;border:1px solid #E5E8EB;padding:16px;margin-bottom:12px}
+        .detail-section-title{font-size:13px;font-weight:700;color:#191F28;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+        .detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F2F4F6;font-size:13px}
+        .detail-row:last-child{border-bottom:none}
+        .detail-label{color:#8B95A1}
+        .detail-value{color:#191F28;font-weight:500;text-align:right;max-width:60%}
+
+        /* ── Photo Upload ── */
+        .photo-stage-title{font-size:12px;font-weight:600;color:#4E5968;margin:12px 0 8px;display:flex;align-items:center;gap:6px}
+        .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+        .photo-slot{aspect-ratio:1;background:#F2F4F6;border-radius:12px;border:2px dashed #D1D6DB;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;overflow:hidden;position:relative}
+        .photo-slot:active{border-color:#35C5F0;background:#F7FDFF}
+        .photo-slot .plus{font-size:24px;color:#ADB5BD}
+        .photo-slot .label{font-size:10px;color:#ADB5BD}
+        .photo-slot.filled{border:2px solid #00B140;background:#F0FFF4}
+        .photo-slot.filled .check{font-size:20px;color:#00875A}
+        .photo-slot.filled .count{font-size:10px;color:#00875A;font-weight:600}
+        .photo-slot img{width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0}
+
+        /* ── Status Action ── */
+        .status-action{position:fixed;bottom:0;left:0;right:0;max-width:430px;margin:0 auto;padding:12px 16px max(12px,env(safe-area-inset-bottom));background:linear-gradient(transparent,#f5f6f8 30%);z-index:20}
+        .status-btn{width:100%;padding:16px;border:none;border-radius:14px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+        .status-btn.start{background:#35C5F0;color:#fff}
+        .status-btn.start:active{background:#20B2E0}
+        .status-btn.complete{background:#00B140;color:#fff}
+        .status-btn.complete:active{background:#009B38}
+        .status-btn.disabled{background:#E5E8EB;color:#ADB5BD;pointer-events:none}
+
+        /* ── Bottom Bar ── */
+        .bottom-bar{position:fixed;bottom:0;left:0;right:0;max-width:430px;margin:0 auto;background:#fff;border-top:1px solid #E5E8EB;display:flex;padding:6px 0 max(6px,env(safe-area-inset-bottom));z-index:60}
+        .bottom-item{flex:1;text-align:center;padding:6px 0;cursor:pointer}
+        .bottom-icon{font-size:20px;margin-bottom:2px}
+        .bottom-label{font-size:10px;color:#8B95A1;font-weight:500}
+        .bottom-item.active .bottom-label{color:#35C5F0;font-weight:600}
+        .noti-badge{position:relative}.noti-badge::after{content:'';position:absolute;top:-2px;right:-6px;width:6px;height:6px;background:#F04452;border-radius:50%}
+
+        /* ── Noti / My ── */
+        .noti-item{background:#fff;border-radius:12px;border:1px solid #E5E8EB;padding:14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start}
+        .noti-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+        .noti-text{flex:1}.noti-title{font-size:13px;font-weight:600;color:#191F28;margin-bottom:2px}
+        .noti-desc{font-size:12px;color:#6B7684;line-height:1.4}
+        .noti-time{font-size:10px;color:#ADB5BD;margin-top:4px}
+        .profile-card{background:#fff;border-radius:14px;border:1px solid #E5E8EB;padding:20px;text-align:center;margin-bottom:14px}
+        .profile-avatar{width:64px;height:64px;border-radius:50%;background:#35C5F0;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;margin:0 auto 10px}
+        .profile-name{font-size:18px;font-weight:700;color:#191F28}
+        .profile-company{font-size:12px;color:#8B95A1;margin-top:2px}
+        .profile-stats{display:flex;gap:0;margin-top:16px;border-top:1px solid #F2F4F6;padding-top:16px}
+        .profile-stat{flex:1;text-align:center}
+        .profile-stat-value{font-size:20px;font-weight:700;color:#191F28}
+        .profile-stat-label{font-size:11px;color:#8B95A1;margin-top:2px}
+        .menu-group{border:1px solid #E5E8EB;border-radius:14px;overflow:hidden;margin-bottom:14px}
+        .menu-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:#fff;border-bottom:1px solid #F2F4F6;font-size:14px;color:#191F28;cursor:pointer}
+        .menu-item:last-child{border-bottom:none}
+        .menu-item:active{background:#F7F8FA}
+        .menu-icon{font-size:18px;width:24px;text-align:center}
+        .menu-arrow{margin-left:auto;color:#D1D6DB}
+        .stars{color:#FFB800}.stars .empty{color:#E5E8EB}
+        .up{color:#00B140;font-weight:600}.down{color:#F04452;font-weight:600}.warn{color:#FF7E36;font-weight:600}
+
+        /* ── Confirm dialog ── */
+        .confirm-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center;max-width:430px;margin:0 auto}
+        .confirm-overlay.show{display:flex}
+        .confirm-box{background:#fff;border-radius:16px;padding:24px;width:320px;text-align:center}
+        .confirm-title{font-size:16px;font-weight:700;margin-bottom:8px}
+        .confirm-desc{font-size:13px;color:#6B7684;margin-bottom:20px;line-height:1.5}
+        .confirm-actions{display:flex;gap:8px}
+        .confirm-actions button{flex:1;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer}
+        .confirm-cancel{background:#F2F4F6;color:#4E5968}
+        .confirm-ok{background:#35C5F0;color:#fff}
+        .confirm-ok.green{background:#00B140}
+
+        /* hidden file input */
+        .hidden-input{position:absolute;opacity:0;width:0;height:0}
+
+        /* Toast */
+        .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#191F28;color:#fff;padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600;z-index:400;opacity:0;transition:opacity .3s;pointer-events:none;max-width:360px;text-align:center}
+        .toast.show{opacity:1}
+    </style>
+</head>
+<body>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Confirm Dialog -->
+<div class="confirm-overlay" id="confirmDialog">
+    <div class="confirm-box">
+        <div class="confirm-title" id="confirmTitle"></div>
+        <div class="confirm-desc" id="confirmDesc"></div>
+        <div class="confirm-actions">
+            <button class="confirm-cancel" onclick="closeConfirm()">취소</button>
+            <button class="confirm-ok" id="confirmOk">확인</button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden file input for photo upload -->
+<input type="file" accept="image/*" capture="environment" class="hidden-input" id="photoInput">
+
+<!-- ===== LOGIN ===== -->
+<div class="login-screen" id="loginScreen">
+    <div class="login-logo"><div class="icon">S</div><div class="text">시공관리</div></div>
+    <div class="login-sub">시공자 전용 앱</div>
+    <div class="login-form">
+        <div class="login-field">
+            <label class="login-label">아이디</label>
+            <input type="text" class="login-input" id="loginId" placeholder="아이디 입력">
+        </div>
+        <div class="login-field">
+            <label class="login-label">비밀번호</label>
+            <input type="password" class="login-input" id="loginPw" placeholder="비밀번호 입력">
+        </div>
+        <button class="login-btn" onclick="doLogin()">로그인</button>
+        <div class="login-error" id="loginError"></div>
+    </div>
+    <div class="login-accounts">
+        <strong>테스트 계정 (시공자)</strong>
+        <div>kim.th / 1234 — 김태현</div>
+        <div>han.jh / 1234 — 한지훈</div>
+        <div>cho.hb / 1234 — 조현빈</div>
+    </div>
+    <div class="login-footer">계정 문의: 소속 테크사 관리자</div>
+</div>
+
+<!-- ===== APP ===== -->
+<div class="app" id="app">
+    <div class="header">
+        <div class="header-top">
+            <div class="header-user">
+                <div class="header-avatar" id="hAvatar">김</div>
+                <div><div class="header-name" id="hName">김태현</div><div class="header-company" id="hCompany">퍼스트씨에스 · 에어컨/설비</div></div>
+            </div>
+            <div class="header-status on" id="workStatus" onclick="toggleStatus()"><span style="font-size:8px">🟢</span> 근무중</div>
+        </div>
+    </div>
+
+    <div class="app-content">
+        <!-- PAGE: 오늘 -->
+        <div class="app-page active" id="page-today">
+            <div class="today-card">
+                <div class="today-label">오늘의 일정</div>
+                <div class="today-date" id="todayDate"></div>
+                <div class="today-stats" id="todayStats"></div>
+            </div>
+            <div id="todayJobs"></div>
+            <div id="emptyToday" style="display:none;text-align:center;padding:40px;color:#ADB5BD;font-size:13px">오늘 배정된 일정이 없습니다</div>
+        </div>
+
+        <!-- PAGE: 캘린더 -->
+        <div class="app-page" id="page-calendar">
+            <div class="cal-card">
+                <div class="cal-header">
+                    <div class="cal-month" id="calMonthLabel"></div>
+                    <div class="cal-nav">
+                        <div class="cal-nav-btn" onclick="changeMonth(-1)">◀</div>
+                        <div class="cal-nav-btn" onclick="changeMonth(1)">▶</div>
+                    </div>
+                </div>
+                <div class="cal-grid" id="calGrid"></div>
+                <div class="cal-legend">
+                    <div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#35C5F0;margin-right:4px;vertical-align:middle"></span>시공</div>
+                    <div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#F04452;margin-right:4px;vertical-align:middle"></span>AS</div>
+                </div>
+            </div>
+            <div style="font-size:13px;font-weight:700;margin-bottom:10px;padding:0 4px" id="selectedDateLabel"></div>
+            <div id="selectedDateJobs"></div>
+        </div>
+
+        <!-- PAGE: 알림 -->
+        <div class="app-page" id="page-noti">
+            <div style="font-size:14px;font-weight:700;margin-bottom:12px">알림</div>
+            <div id="notiList"></div>
+        </div>
+
+        <!-- PAGE: 내정보 -->
+        <div class="app-page" id="page-my">
+            <div class="profile-card">
+                <div class="profile-avatar" id="myAvatar">김</div>
+                <div class="profile-name" id="myName">김태현</div>
+                <div class="profile-company" id="myCompany">퍼스트씨에스 · 에어컨/설비</div>
+                <div class="profile-stats" id="myStats"></div>
+            </div>
+            <div class="menu-group">
+                <div class="menu-item" onclick="showCerts()"><span class="menu-icon">📜</span>자격증 정보<span class="menu-arrow">›</span></div>
+                <div class="menu-item" onclick="showMyRecord()"><span class="menu-icon">📊</span>내 실적<span class="menu-arrow">›</span></div>
+                <div class="menu-item" onclick="showMyFeedback()"><span class="menu-icon">⭐</span>고객 평가<span class="menu-arrow">›</span></div>
+            </div>
+            <div class="menu-group">
+                <div class="menu-item" onclick="doLogout()" style="color:#F04452"><span class="menu-icon">🚪</span>로그아웃<span class="menu-arrow">›</span></div>
+            </div>
+            <!-- cert / record / feedback detail -->
+            <div id="myDetailContent"></div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <div class="bottom-item active" onclick="switchPage('today',this)"><div class="bottom-icon">📋</div><div class="bottom-label">오늘</div></div>
+        <div class="bottom-item" onclick="switchPage('calendar',this)"><div class="bottom-icon">📅</div><div class="bottom-label">캘린더</div></div>
+        <div class="bottom-item" onclick="switchPage('noti',this)"><div class="bottom-icon"><span class="noti-badge" id="notiBadge">🔔</span></div><div class="bottom-label">알림</div></div>
+        <div class="bottom-item" onclick="switchPage('my',this)"><div class="bottom-icon">👤</div><div class="bottom-label">내정보</div></div>
+    </div>
+</div>
+
+<!-- ===== DETAIL SCREEN ===== -->
+<div class="detail-screen" id="detailScreen">
+    <div class="detail-header">
+        <button class="detail-back" onclick="closeDetail()">←</button>
+        <div class="detail-title" id="detailTitle"></div>
+        <span class="tag" id="detailTag"></span>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+    <div class="status-action" id="detailAction"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="shared-data.js"></script>
+<script>
+// ===== STATE =====
+let currentUser = null; // account object
+let currentWorker = null; // worker object
+let calYear = 2026, calMonth = 2; // 0-indexed (2 = March)
+let selectedDate = null;
+let currentDetailJobId = null;
+let photoTarget = null; // {jobId, stage} for photo upload
+
+DB.init();
+DB.seedIfEmpty();
+
+// ===== LOGIN =====
+function doLogin() {
+    if (!DB._ready) { document.getElementById('loginError').textContent = '데이터 로딩중... 잠시 후 다시 시도하세요'; return; }
+    const id = document.getElementById('loginId').value.trim();
+    const pw = document.getElementById('loginPw').value.trim();
+    const accounts = DB.getAll('accounts');
+    const acc = accounts.find(a => a.loginId === id && a.password === pw && (a.role === 'worker'));
+    if (!acc) {
+        document.getElementById('loginError').textContent = '아이디 또는 비밀번호가 올바르지 않습니다';
+        return;
+    }
+    currentUser = acc;
+    currentWorker = DB.getById('workers', acc.workerId);
+    const company = DB.getById('companies', acc.companyId);
+
+    document.getElementById('hAvatar').textContent = acc.avatar;
+    document.getElementById('hName').textContent = acc.name;
+    document.getElementById('hCompany').textContent = `${company?.name || ''} · ${currentWorker?.skill || ''}`;
+    document.getElementById('myAvatar').textContent = acc.avatar;
+    document.getElementById('myName').textContent = acc.name;
+    document.getElementById('myCompany').textContent = `${company?.name || ''} · ${currentWorker?.skill || ''}`;
+
+    document.getElementById('loginScreen').classList.add('hide');
+    document.getElementById('app').classList.add('show');
+    renderAll();
+}
+
+function doLogout() {
+    currentUser = null;
+    currentWorker = null;
+    document.getElementById('loginScreen').classList.remove('hide');
+    document.getElementById('app').classList.remove('show');
+    document.getElementById('loginId').value = '';
+    document.getElementById('loginPw').value = '';
+    document.getElementById('loginError').textContent = '';
+}
+
+// ===== NAV =====
+function switchPage(page, el) {
+    document.querySelectorAll('.app-page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    document.querySelectorAll('.bottom-item').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+    if (page === 'calendar') renderCalendar();
+    if (page === 'noti') renderNotifications();
+    if (page === 'my') renderMyPage();
+}
+
+function toggleStatus() {
+    const el = document.getElementById('workStatus');
+    if (el.classList.contains('on')) {
+        el.classList.remove('on'); el.classList.add('off');
+        el.innerHTML = '<span style="font-size:8px">⚫</span> 휴무';
+    } else {
+        el.classList.remove('off'); el.classList.add('on');
+        el.innerHTML = '<span style="font-size:8px">🟢</span> 근무중';
+    }
+}
+
+// ===== TOAST =====
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===== CONFIRM =====
+let confirmCallback = null;
+function showConfirm(title, desc, okText, okClass, cb) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmDesc').textContent = desc;
+    const btn = document.getElementById('confirmOk');
+    btn.textContent = okText;
+    btn.className = 'confirm-ok' + (okClass ? ' ' + okClass : '');
+    confirmCallback = cb;
+    document.getElementById('confirmDialog').classList.add('show');
+}
+function closeConfirm() { document.getElementById('confirmDialog').classList.remove('show'); confirmCallback = null; }
+document.getElementById('confirmOk').onclick = () => { if (confirmCallback) confirmCallback(); closeConfirm(); };
+
+// ===== TODAY =====
+function getMyJobs(date) {
+    if (!currentWorker) return [];
+    return DB.getAll('jobs').filter(j => j.workerId === currentWorker.id && j.date === date).sort((a, b) => a.time.localeCompare(b.time));
+}
+
+function renderToday() {
+    const today = '2026-03-31';
+    const dow = ['일', '월', '화', '수', '목', '금', '토'];
+    const dt = new Date(2026, 2, 31);
+    document.getElementById('todayDate').textContent = `3월 31일 (${dow[dt.getDay()]})`;
+
+    const jobs = getMyJobs(today);
+    const done = jobs.filter(j => j.status === 'done').length;
+    const prog = jobs.filter(j => j.status === 'progress').length;
+    const wait = jobs.filter(j => j.status === 'waiting').length;
+
+    document.getElementById('todayStats').innerHTML = `
+        <div class="today-stat"><div class="today-stat-value">${jobs.length}</div><div class="today-stat-label">전체</div></div>
+        <div class="today-stat"><div class="today-stat-value">${done}</div><div class="today-stat-label">완료</div></div>
+        <div class="today-stat"><div class="today-stat-value">${prog}</div><div class="today-stat-label">진행중</div></div>
+        <div class="today-stat"><div class="today-stat-value">${wait}</div><div class="today-stat-label">대기</div></div>`;
+
+    const el = document.getElementById('todayJobs');
+    document.getElementById('emptyToday').style.display = jobs.length ? 'none' : 'block';
+    if (!jobs.length) { el.innerHTML = ''; return; }
+
+    el.innerHTML = jobs.map(j => renderJobCard(j)).join('');
+}
+
+// ===== PRIVACY =====
+function getPrivacy() {
+    if (!currentUser?.companyId) return { showCustomerName: true, showCustomerPhone: true };
+    const comp = DB.getById('companies', currentUser.companyId);
+    return comp?.privacy || { showCustomerName: true, showCustomerPhone: true };
+}
+function maskName(name) { if (!name || name.length < 2) return '***'; return name[0] + '*'.repeat(name.length - 1); }
+function maskPhone(phone) { if (!phone) return '***-****-****'; return phone.replace(/(\d{3})[\d-]*(\d{4})$/, '$1-****-$2'); }
+function displayCustomer(j) {
+    const p = getPrivacy();
+    const name = p.showCustomerName ? j.customer : maskName(j.customer);
+    const phone = p.showCustomerPhone ? j.phone : maskPhone(j.phone);
+    return { name, phone, canCall: p.showCustomerPhone };
+}
+
+function renderJobCard(j) {
+    let tagCls = j.status === 'done' ? 'tag-done' : j.status === 'progress' ? 'tag-progress' : 'tag-wait';
+    let tagText = j.status === 'done' ? '완료' : j.status === 'progress' ? '진행중' : '대기';
+    if (j.isAS) { tagCls = 'tag-as'; tagText = 'AS ' + tagText; }
+    let src = j.source === 'api' ? `<span class="source-api">API</span>` : `<span class="source-self">자체</span>`;
+    const ci = displayCustomer(j);
+
+    let callBtn = ci.canCall
+        ? `<button class="job-btn job-btn-outline" onclick="event.stopPropagation();callCustomer('${j.phone}')">📞 고객</button>`
+        : `<button class="job-btn job-btn-disabled" onclick="event.stopPropagation()" style="opacity:.5;pointer-events:none">📞 비공개</button>`;
+
+    let actions = '';
+    if (j.status === 'waiting') {
+        actions = `<button class="job-btn job-btn-primary" onclick="event.stopPropagation();openDetail('${j.id}')">현장 확인</button>${callBtn}`;
+    } else if (j.status === 'progress') {
+        actions = `<button class="job-btn job-btn-green" onclick="event.stopPropagation();openDetail('${j.id}')">사진등록 / 완료</button>${callBtn}`;
+    } else {
+        actions = `<button class="job-btn job-btn-outline" onclick="event.stopPropagation();openDetail('${j.id}')">상세보기</button>`;
+    }
+
+    return `<div class="job-card" onclick="openDetail('${j.id}')">
+        <div class="job-card-top">
+            <div><span class="job-time">${j.time}</span><span class="job-type">${j.type || j.cat}</span></div>
+            <span class="tag ${tagCls}">${tagText}</span>
+        </div>
+        <div>
+            <div class="job-info-row"><span class="job-info-icon">📁</span><span class="job-info-label">분류</span><span class="job-info-value">${j.cat} ${src}</span></div>
+            <div class="job-info-row"><span class="job-info-icon">📍</span><span class="job-info-label">현장</span><span class="job-info-value">${j.addr}</span></div>
+            <div class="job-info-row"><span class="job-info-icon">👤</span><span class="job-info-label">고객</span><span class="job-info-value">${ci.name} · ${ci.phone}</span></div>
+            ${j.memo ? `<div class="job-info-row"><span class="job-info-icon">📝</span><span class="job-info-label">메모</span><span class="job-info-value" style="font-size:12px;color:#6B7684">${j.memo}</span></div>` : ''}
+        </div>
+        <div class="job-actions" onclick="event.stopPropagation()">${actions}</div>
+    </div>`;
+}
+
+// ===== DETAIL =====
+function openDetail(jobId) {
+    const j = DB.getById('jobs', jobId);
+    if (!j) return;
+    currentDetailJobId = jobId;
+
+    let tagCls = j.status === 'done' ? 'tag-done' : j.status === 'progress' ? 'tag-progress' : 'tag-wait';
+    let tagText = j.status === 'done' ? '완료' : j.status === 'progress' ? '진행중' : '대기';
+    if (j.isAS) { tagCls = 'tag-as'; tagText = 'AS'; }
+
+    document.getElementById('detailTitle').textContent = j.id;
+    const tagEl = document.getElementById('detailTag');
+    tagEl.className = 'tag ' + tagCls;
+    tagEl.textContent = tagText;
+
+    let html = '';
+
+    // 현장 정보
+    html += `<div class="detail-section">
+        <div class="detail-section-title">📍 현장 정보</div>
+        <div class="detail-row"><span class="detail-label">시간</span><span class="detail-value">${j.time}</span></div>
+        <div class="detail-row"><span class="detail-label">카테고리</span><span class="detail-value">${j.cat} — ${j.type || ''}</span></div>
+        <div class="detail-row"><span class="detail-label">주소</span><span class="detail-value" style="font-size:12px">${j.addr}</span></div>
+        <div style="margin-top:8px"><button class="job-btn job-btn-primary" style="width:100%" onclick="openNav('${encodeURIComponent(j.addr)}')">📍 네비게이션 열기</button></div>
+    </div>`;
+
+    // 고객 정보 (privacy 적용)
+    const ci = displayCustomer(j);
+    html += `<div class="detail-section">
+        <div class="detail-section-title">👤 고객 정보</div>
+        <div class="detail-row"><span class="detail-label">고객명</span><span class="detail-value">${ci.name}</span></div>
+        <div class="detail-row"><span class="detail-label">연락처</span><span class="detail-value">${ci.phone}</span></div>
+        ${ci.canCall
+            ? `<div style="margin-top:8px"><button class="job-btn job-btn-outline" style="width:100%" onclick="callCustomer('${j.phone}')">📞 고객에게 전화</button></div>`
+            : `<div style="margin-top:8px;text-align:center;padding:8px;color:#8B95A1;font-size:12px;background:#F7F8FA;border-radius:8px">🔒 고객 연락처가 비공개 설정되어 있습니다</div>`}
+    </div>`;
+
+    // 오더 정보
+    let srcText = j.source === 'api' ? `오늘의집 API · ${j.extId || ''}` : '자체 등록';
+    html += `<div class="detail-section">
+        <div class="detail-section-title">📦 오더 정보</div>
+        <div class="detail-row"><span class="detail-label">출처</span><span class="detail-value">${srcText}</span></div>
+        ${j.memo ? `<div class="detail-row"><span class="detail-label">메모</span><span class="detail-value" style="font-size:12px">${j.memo}</span></div>` : ''}
+    </div>`;
+
+    // AS 정보
+    if (j.isAS) {
+        html += `<div class="detail-section" style="border-color:#FFD6DA">
+            <div class="detail-section-title">🔧 AS 정보</div>
+            <div class="detail-row"><span class="detail-label">원시공</span><span class="detail-value">${j.origJobId || '—'}</span></div>
+            <div class="detail-row"><span class="detail-label">유형코드</span><span class="detail-value" style="color:#D46B08;font-weight:600">${j.asCode || ''}</span></div>
+            <div class="detail-row"><span class="detail-label">증상</span><span class="detail-value" style="font-size:12px">${j.asIssue || ''}</span></div>
+        </div>`;
+    }
+
+    // 시간 기록
+    if (j.startedAt || j.completedAt) {
+        html += `<div class="detail-section">
+            <div class="detail-section-title">⏱ 시간 기록</div>
+            ${j.startedAt ? `<div class="detail-row"><span class="detail-label">시작</span><span class="detail-value">${HELPERS.formatDateTime(j.startedAt)}</span></div>` : ''}
+            ${j.completedAt ? `<div class="detail-row"><span class="detail-label">완료</span><span class="detail-value">${HELPERS.formatDateTime(j.completedAt)}</span></div>` : ''}
+        </div>`;
+    }
+
+    // 사진 3단계
+    const photos = j.photos || { before: 0, during: 0, after: 0 };
+    html += `<div class="detail-section">
+        <div class="detail-section-title">📸 시공 사진</div>
+        ${renderPhotoStage(j.id, 'before', '① 시공 전', '현장 기존 상태', photos.before)}
+        ${renderPhotoStage(j.id, 'during', '② 시공 중', '작업 진행 과정', photos.during)}
+        ${renderPhotoStage(j.id, 'after', '③ 시공 후', '완료 상태', photos.after)}
+    </div>`;
+
+    // 고객 평가
+    const fb = DB.getAll('feedback').find(f => f.jobId === j.id);
+    if (fb) {
+        html += `<div class="detail-section">
+            <div class="detail-section-title">⭐ 고객 평가</div>
+            <div style="text-align:center;padding:8px 0">
+                ${HELPERS.starsHtml(fb.rating, '24px')}
+                <div style="font-size:13px;color:#191F28;margin-top:4px">"${fb.comment}"</div>
+            </div>
+        </div>`;
+    }
+
+    document.getElementById('detailBody').innerHTML = html;
+
+    // Action button
+    let actionHtml = '';
+    if (j.status === 'waiting') {
+        actionHtml = `<button class="status-btn start" onclick="startJob('${j.id}')">🔧 시공 시작</button>`;
+    } else if (j.status === 'progress') {
+        const canComplete = photos.before > 0 && photos.during > 0 && photos.after > 0;
+        if (canComplete) {
+            actionHtml = `<button class="status-btn complete" onclick="completeJob('${j.id}')">✅ 시공 완료</button>`;
+        } else {
+            let missing = [];
+            if (!photos.before) missing.push('시공 전');
+            if (!photos.during) missing.push('시공 중');
+            if (!photos.after) missing.push('시공 후');
+            actionHtml = `<button class="status-btn disabled">📸 ${missing.join(', ')} 사진을 등록해주세요</button>`;
+        }
+    }
+    document.getElementById('detailAction').innerHTML = actionHtml;
+    document.getElementById('detailScreen').classList.add('show');
+}
+
+function renderPhotoStage(jobId, stage, title, desc, count) {
+    const canUpload = (() => {
+        const j = DB.getById('jobs', jobId);
+        if (!j) return false;
+        if (j.status === 'done') return false;
+        if (j.status === 'waiting') return stage === 'before';
+        return true; // progress
+    })();
+
+    let slots = '';
+    for (let i = 0; i < 3; i++) {
+        if (i < count) {
+            slots += `<div class="photo-slot filled"><div class="check">✅</div><div class="count">${i + 1}장</div></div>`;
+        } else if (canUpload) {
+            slots += `<div class="photo-slot" onclick="triggerPhotoUpload('${jobId}','${stage}')"><div class="plus">+</div><div class="label">촬영</div></div>`;
+        } else {
+            slots += `<div class="photo-slot" style="opacity:.4"><div class="plus">—</div></div>`;
+        }
+    }
+    return `<div class="photo-stage-title">${title} <span style="font-size:11px;color:#8B95A1;font-weight:400">— ${desc}</span> ${count > 0 ? `<span style="font-size:11px;color:#00875A;font-weight:600;margin-left:auto">${count}장</span>` : ''}</div>
+            <div class="photo-grid">${slots}</div>`;
+}
+
+function closeDetail() {
+    document.getElementById('detailScreen').classList.remove('show');
+    currentDetailJobId = null;
+    renderToday();
+}
+
+// ===== STATUS TRANSITIONS =====
+function startJob(jobId) {
+    showConfirm('시공 시작', '현장에 도착하여 시공을 시작하시겠습니까?', '시공 시작', '', () => {
+        DB.update('jobs', jobId, { status: 'progress', startedAt: new Date().toISOString() });
+        showToast('시공이 시작되었습니다');
+        openDetail(jobId);
+    });
+}
+
+function completeJob(jobId) {
+    showConfirm('시공 완료', '시공을 완료 처리하시겠습니까?\n완료 후에는 수정이 불가합니다.', '시공 완료', 'green', () => {
+        DB.update('jobs', jobId, { status: 'done', completedAt: new Date().toISOString() });
+        showToast('시공이 완료 처리되었습니다');
+        openDetail(jobId);
+    });
+}
+
+// ===== PHOTO UPLOAD =====
+function triggerPhotoUpload(jobId, stage) {
+    photoTarget = { jobId, stage };
+    document.getElementById('photoInput').click();
+}
+
+document.getElementById('photoInput').addEventListener('change', function (e) {
+    if (!photoTarget || !e.target.files.length) return;
+    const job = DB.getById('jobs', photoTarget.jobId);
+    if (!job) return;
+    const photos = job.photos || { before: 0, during: 0, after: 0 };
+    if (photos[photoTarget.stage] < 3) {
+        photos[photoTarget.stage]++;
+    }
+    DB.update('jobs', photoTarget.jobId, { photos });
+    showToast(`${photoTarget.stage === 'before' ? '시공 전' : photoTarget.stage === 'during' ? '시공 중' : '시공 후'} 사진이 등록되었습니다`);
+    openDetail(photoTarget.jobId);
+    e.target.value = '';
+    photoTarget = null;
+});
+
+// ===== PHONE / NAV =====
+function callCustomer(phone) {
+    if (phone) window.location.href = 'tel:' + phone;
+}
+function openNav(addr) {
+    // Try Kakao Map, fallback to Google Maps
+    const decoded = decodeURIComponent(addr);
+    window.open('https://map.kakao.com/?q=' + encodeURIComponent(decoded));
+}
+
+// ===== CALENDAR =====
+function renderCalendar() {
+    const year = calYear, month = calMonth;
+    const monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    document.getElementById('calMonthLabel').textContent = `${year}년 ${monthNames[month]}`;
+
+    const dows = ['일','월','화','수','목','금','토'];
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+    const todayDate = today.getDate();
+
+    // Get jobs for this month
+    const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const monthJobs = DB.getAll('jobs').filter(j => j.workerId === currentWorker?.id && j.date && j.date.startsWith(monthStr));
+
+    let html = '';
+    dows.forEach(d => html += `<div class="cal-dow">${d}</div>`);
+
+    // Previous month padding
+    for (let i = 0; i < firstDay; i++) html += '<div class="cal-day other"></div>';
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const dayJobs = monthJobs.filter(j => j.date === dateStr);
+        const hasJob = dayJobs.some(j => !j.isAS);
+        const hasAS = dayJobs.some(j => j.isAS);
+
+        let cls = 'cal-day';
+        if (isCurrentMonth && d === 31 && month === 2) cls += ' today'; // hardcoded for demo
+        if (selectedDate === d) cls += ' selected';
+
+        let dots = '';
+        if (hasJob) dots += '<span class="cal-dot job"></span>';
+        if (hasAS) dots += '<span class="cal-dot as"></span>';
+
+        html += `<div class="${cls}" onclick="selectDate(${d})"><div>${d}</div><div class="dot-row">${dots}</div></div>`;
+    }
+
+    document.getElementById('calGrid').innerHTML = html;
+
+    if (selectedDate) selectDate(selectedDate);
+    else if (isCurrentMonth) selectDate(31);
+    else selectDate(1);
+}
+
+function changeMonth(delta) {
+    calMonth += delta;
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    if (calMonth < 0) { calMonth = 11; calYear--; }
+    selectedDate = null;
+    renderCalendar();
+}
+
+function selectDate(d) {
+    selectedDate = d;
+    const dow = ['일','월','화','수','목','금','토'];
+    const dt = new Date(calYear, calMonth, d);
+    document.getElementById('selectedDateLabel').textContent = `${calMonth + 1}월 ${d}일 (${dow[dt.getDay()]}) 일정`;
+
+    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const jobs = getMyJobs(dateStr);
+
+    const el = document.getElementById('selectedDateJobs');
+    if (!jobs.length) {
+        el.innerHTML = '<div style="text-align:center;padding:30px;color:#ADB5BD;font-size:13px">일정이 없습니다</div>';
+    } else {
+        el.innerHTML = jobs.map(j => renderJobCard(j)).join('');
+    }
+
+    // Update calendar highlights
+    document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('selected'));
+    const days = document.querySelectorAll('.cal-day:not(.other)');
+    if (days[d - 1]) days[d - 1].classList.add('selected');
+}
+
+// ===== NOTIFICATIONS =====
+function renderNotifications() {
+    if (!currentWorker) return;
+    const all = DB.getAll('notifications').filter(n => n.target === currentWorker.id || n.target === currentUser?.companyId);
+    const icons = { schedule: '📅', feedback: '⭐', as: '🔧', cert: '📜', alert: '🔔', settle: '💰' };
+    const bgColors = { schedule: '#E8F4FD', feedback: '#FFF8E8', as: '#FFF3E8', cert: '#FFEEF0', alert: '#F0F7FF', settle: '#F3EAFF' };
+
+    const el = document.getElementById('notiList');
+    if (!all.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:#ADB5BD;font-size:13px">알림이 없습니다</div>'; return; }
+
+    el.innerHTML = all.map(n => `<div class="noti-item">
+        <div class="noti-icon" style="background:${bgColors[n.type] || '#F2F4F6'}">${icons[n.type] || '🔔'}</div>
+        <div class="noti-text"><div class="noti-title">${n.title}</div><div class="noti-desc">${n.desc}</div><div class="noti-time">${HELPERS.formatDateTime(n.createdAt)}</div></div>
+    </div>`).join('');
+}
+
+// ===== MY PAGE =====
+function renderMyPage() {
+    if (!currentWorker) return;
+    const stats = HELPERS.workerStats(currentWorker.id);
+    document.getElementById('myStats').innerHTML = `
+        <div class="profile-stat"><div class="profile-stat-value">${stats.monthlyJobs}</div><div class="profile-stat-label">이번달 시공</div></div>
+        <div class="profile-stat"><div class="profile-stat-value">${stats.rate}%</div><div class="profile-stat-label">완료율</div></div>
+        <div class="profile-stat"><div class="profile-stat-value">${stats.avgRating}</div><div class="profile-stat-label">평점</div></div>`;
+}
+
+function showCerts() {
+    if (!currentWorker?.certs) return;
+    let html = '<div style="background:#fff;border-radius:14px;border:1px solid #E5E8EB;padding:16px;margin-top:14px">';
+    html += '<div style="font-size:14px;font-weight:700;margin-bottom:12px">자격증 정보</div>';
+    currentWorker.certs.forEach(c => {
+        const st = HELPERS.certStatus(c.expiry);
+        html += `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #F2F4F6">
+            <div><div style="font-size:13px;font-weight:600">${c.name}</div><div style="font-size:11px;color:#8B95A1">${c.no}</div></div>
+            <div style="text-align:right"><span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600" class="${st.cls}">${st.icon} ${st.text}</span></div>
+        </div>`;
+    });
+    html += '</div>';
+    document.getElementById('myDetailContent').innerHTML = html;
+}
+
+function showMyRecord() {
+    if (!currentWorker) return;
+    const jobs = DB.getAll('jobs').filter(j => j.workerId === currentWorker.id && j.date?.startsWith('2026-03'));
+    const done = jobs.filter(j => j.status === 'done');
+    let html = '<div style="background:#fff;border-radius:14px;border:1px solid #E5E8EB;padding:16px;margin-top:14px">';
+    html += '<div style="font-size:14px;font-weight:700;margin-bottom:12px">3월 실적</div>';
+    html += `<div style="display:flex;gap:12px;margin-bottom:12px">
+        <div style="flex:1;background:#F7F8FA;border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:700">${jobs.length}</div><div style="font-size:11px;color:#8B95A1">전체</div></div>
+        <div style="flex:1;background:#F7F8FA;border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:700;color:#00B140">${done.length}</div><div style="font-size:11px;color:#8B95A1">완료</div></div>
+        <div style="flex:1;background:#F7F8FA;border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:700">${jobs.length ? Math.round(done.length / jobs.length * 100) : 0}%</div><div style="font-size:11px;color:#8B95A1">완료율</div></div>
+    </div>`;
+    // recent list
+    done.slice(-5).reverse().forEach(j => {
+        html += `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F2F4F6;font-size:12px">
+            <span style="color:#8B95A1">${HELPERS.formatDate(j.date)} ${j.time}</span>
+            <span style="font-weight:500">${j.cat} — ${j.type||''}</span>
+        </div>`;
+    });
+    html += '</div>';
+    document.getElementById('myDetailContent').innerHTML = html;
+}
+
+function showMyFeedback() {
+    if (!currentWorker) return;
+    const fbs = DB.getAll('feedback').filter(f => f.workerId === currentWorker.id);
+    let html = '<div style="background:#fff;border-radius:14px;border:1px solid #E5E8EB;padding:16px;margin-top:14px">';
+    html += '<div style="font-size:14px;font-weight:700;margin-bottom:12px">고객 평가</div>';
+    if (!fbs.length) { html += '<div style="text-align:center;padding:20px;color:#ADB5BD;font-size:13px">아직 평가가 없습니다</div>'; }
+    fbs.forEach(f => {
+        html += `<div style="padding:10px 0;border-bottom:1px solid #F2F4F6">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                ${HELPERS.starsHtml(f.rating, '14px')}
+                <span style="font-size:11px;color:#8B95A1">${HELPERS.formatDate(f.createdAt)}</span>
+            </div>
+            <div style="font-size:13px;color:#4E5968">"${f.comment}"</div>
+        </div>`;
+    });
+    html += '</div>';
+    document.getElementById('myDetailContent').innerHTML = html;
+}
+
+// ===== SYNC: Listen for changes from admin app =====
+DB.listenSync((key, action, id) => {
+    // When admin app adds/updates jobs, refresh our views
+    if (key === 'jobs' || key === 'asTickets' || key === 'notifications') {
+        renderToday();
+        if (currentDetailJobId) openDetail(currentDetailJobId);
+    }
+});
+
+// ===== RENDER ALL =====
+function renderAll() {
+    renderToday();
+    renderCalendar();
+    renderNotifications();
+    renderMyPage();
+}
+</script>
+</body>
+</html>
