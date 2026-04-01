@@ -125,6 +125,8 @@
         .photo-slot.filled{border:2px solid #00B140;background:#F0FFF4}
         .photo-slot.filled .check{font-size:20px;color:#00875A}
         .photo-slot.filled .count{font-size:10px;color:#00875A;font-weight:600}
+        .photo-slot .delete-btn{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;border:none;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
+        .photo-slot .delete-btn:active{background:rgba(0,0,0,.7)}
         .photo-slot img{width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0}
 
         /* ── Status Action ── */
@@ -627,7 +629,8 @@ function renderPhotoStage(jobId, stage, title, desc, count) {
     let slots = '';
     for (let i = 0; i < 3; i++) {
         if (i < count) {
-            slots += `<div class="photo-slot filled"><div class="check">✅</div><div class="count">${i + 1}장</div></div>`;
+            const delBtn = canUpload ? `<button class="delete-btn" onclick="event.stopPropagation();deletePhoto('${jobId}','${stage}')">✕</button>` : '';
+            slots += `<div class="photo-slot filled">${delBtn}<div class="check">✅</div><div class="count">${i + 1}장</div></div>`;
         } else if (canUpload) {
             slots += `<div class="photo-slot" onclick="triggerPhotoUpload('${jobId}','${stage}')"><div class="plus">+</div><div class="label">촬영</div></div>`;
         } else {
@@ -681,6 +684,20 @@ document.getElementById('photoInput').addEventListener('change', function (e) {
     e.target.value = '';
     photoTarget = null;
 });
+
+// ===== PHOTO DELETE =====
+function deletePhoto(jobId, stage) {
+    const stageNames = { before: '시공 전', during: '시공 중', after: '시공 후' };
+    showConfirm('사진 삭제', `${stageNames[stage]} 마지막 사진을 삭제하시겠습니까?`, '삭제', '', () => {
+        const job = DB.getById('jobs', jobId);
+        if (!job) return;
+        const photos = job.photos || { before: 0, during: 0, after: 0 };
+        if (photos[stage] > 0) photos[stage]--;
+        DB.update('jobs', jobId, { photos });
+        showToast(`${stageNames[stage]} 사진이 삭제되었습니다`);
+        openDetail(jobId);
+    });
+}
 
 // ===== PHONE / NAV =====
 function callCustomer(phone) {

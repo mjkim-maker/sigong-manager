@@ -128,7 +128,14 @@
         .login-accounts div{padding:2px 0}
         .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#191F28;color:#fff;padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600;z-index:400;opacity:0;transition:opacity .3s;pointer-events:none}
         .toast.show{opacity:1}
-        @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid-2,.grid-6-4{grid-template-columns:1fr}}
+        .kpi-grid-6{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
+        .kpi-mini{font-size:11px;color:#8B95A1;display:flex;align-items:center;gap:3px;margin-top:2px}
+        .progress-bar{height:6px;background:#F2F4F6;border-radius:3px;margin-top:8px;overflow:hidden}
+        .progress-fill{height:100%;border-radius:3px;transition:width .3s}
+        .as-register-card{background:#fff;border-radius:12px;border:1px solid #E5E8EB;padding:16px;margin-bottom:14px}
+        .as-register-card:hover{border-color:#35C5F0;cursor:pointer}
+        @media(max-width:1400px){.kpi-grid-6{grid-template-columns:repeat(3,1fr)}}
+        @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.kpi-grid-6{grid-template-columns:repeat(2,1fr)}.grid-2,.grid-6-4{grid-template-columns:1fr}}
         @media(max-width:768px){.sidebar{display:none}.main-wrap{margin-left:0}}
     </style>
 </head>
@@ -195,6 +202,52 @@
         <div class="form-row"><div class="form-group"><label class="form-label">출처</label><select class="form-select" id="schSource"><option value="self">자체 등록</option><option value="api">오늘의집 API</option></select></div><div class="form-group"><label class="form-label">외부 주문번호</label><input type="text" class="form-input" id="schExtId" placeholder="API 연동 시 자동"></div></div>
         <div class="form-group"><label class="form-label">메모</label><input type="text" class="form-input" id="schMemo"></div>
         <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">취소</button><button class="btn btn-primary" onclick="submitSchedule()">등록</button></div>
+    </div>
+</div>
+
+<!-- AS 등록 모달 -->
+<div class="modal-overlay" id="asModal" onclick="if(event.target===this)closeAsModal()">
+    <div class="modal">
+        <div class="modal-title">🔧 AS 등록 — 완료 건에서 접수</div>
+        <div class="form-group">
+            <label class="form-label">원시공 선택 <span class="req">*</span></label>
+            <select class="form-select" id="asOrigJob" onchange="onAsJobSelect()"></select>
+            <div class="form-hint">완료된 시공건 중에서 선택</div>
+        </div>
+        <div id="asOrigInfo" style="display:none;background:#F7F8FA;border-radius:10px;padding:14px;margin-bottom:14px;font-size:12px;line-height:1.8"></div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">카테고리</label>
+                <input type="text" class="form-input" id="asCat" readonly style="background:#F7F8FA">
+            </div>
+            <div class="form-group">
+                <label class="form-label">AS 유형코드 <span class="req">*</span></label>
+                <select class="form-select" id="asCode"></select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">증상/이슈 <span class="req">*</span></label>
+            <input type="text" class="form-input" id="asIssue" placeholder="고객이 보고한 증상을 입력하세요">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">고객명</label>
+                <input type="text" class="form-input" id="asCustomer" readonly style="background:#F7F8FA">
+            </div>
+            <div class="form-group">
+                <label class="form-label">연락처</label>
+                <input type="text" class="form-input" id="asPhone" readonly style="background:#F7F8FA">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">AS 담당 시공자</label>
+            <select class="form-select" id="asWorker"></select>
+            <div class="form-hint">기본: 원시공 담당자. 변경 가능</div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeAsModal()">취소</button>
+            <button class="btn btn-primary" style="background:#F04452" onclick="submitAS()">AS 접수</button>
+        </div>
     </div>
 </div>
 
@@ -281,26 +334,44 @@ function render(p){
 
     if(p==='home'){
         const todayJobs=jobs.filter(j=>j.date==='2026-03-31').sort((a,b)=>a.time.localeCompare(b.time));
-        const openAS=DB.getAll('asTickets').filter(a=>a.companyId===cid&&a.status==='open');
+        const allAS=DB.getAll('asTickets').filter(a=>a.companyId===cid&&a.date?.startsWith('2026-03'));
+        const openAS=allAS.filter(a=>a.status==='open');
+        const inProgressAS=allAS.filter(a=>a.status==='in_progress');
+        const resolvedAS=allAS.filter(a=>a.status==='resolved');
+        // 남은 시공건 (대기+진행)
+        const monthJobs=jobs.filter(j=>j.date?.startsWith('2026-03'));
+        const remaining=monthJobs.filter(j=>j.status!=='done').length;
+        const delayed=jobs.filter(j=>j.status==='waiting'&&j.date<'2026-03-31').length;
+        // AS 발생율
+        const asRate=monthJobs.length?Math.round(allAS.length/monthJobs.length*1000)/10:0;
+        // AS 재발율: 같은 현장(origJobId)에서 2건 이상 AS가 있는 경우
+        const origCounts={};allAS.forEach(a=>{origCounts[a.origJobId]=(origCounts[a.origJobId]||0)+1});
+        const recurringAS=Object.values(origCounts).filter(c=>c>=2).length;
+        const recurRate=allAS.length?Math.round(recurringAS/allAS.length*1000)/10:0;
+
         let alert='';if(certWarns.length){const ns=certWarns.map(w=>{const c=w.certs.find(c=>HELPERS.certStatus(c.expiry).days<30);return `${w.name} (${c.name} ${c.expiry.substring(5,10)})`}).join(', ');
             alert=`<div class="alert-banner warning"><div class="alert-icon">⚠️</div><div class="alert-text"><strong>자격증 만료 임박 ${certWarns.length}건</strong> — ${ns}</div></div>`}
         let tl=todayJobs.map(j=>{const w=DB.getById('workers',j.workerId);let dc=j.status==='done'?'#00B140':j.status==='progress'?'#35C5F0':'#D1D6DB',sc=j.status==='done'?'tag-green':j.status==='progress'?'tag-blue':'tag-gray',st=j.status==='done'?'완료':j.status==='progress'?'진행중':'대기';
             return `<div class="timeline-item"><div class="timeline-time">${j.time}</div><div class="timeline-dot" style="background:${dc}"></div><div class="timeline-content"><div class="timeline-title">${w?.name||'—'} · <span class="tag tag-blue">${j.cat}</span> ${j.source==='api'?'<span class="source-api">API</span>':''}</div><div class="timeline-desc">${j.addr} · ${j.customer} <span class="tag ${sc}" style="margin-left:4px">${st}</span></div></div></div>`;}).join('');
         if(!todayJobs.length)tl='<div style="text-align:center;padding:20px;color:#ADB5BD;font-size:12px">오늘 일정 없음</div>';
-        let asH=openAS.slice(0,4).map(a=>{const w=DB.getById('workers',a.workerId);return `<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #F2F4F6;gap:10px"><div style="flex:1"><div style="font-size:12px;font-weight:600"><span class="tag tag-purple" style="margin-right:4px">${a.code}</span>${a.issue}</div><div style="font-size:11px;color:#8B95A1">${HELPERS.formatDate(a.date)} · ${a.customer} · ${w?.name||'—'}</div></div><span class="tag tag-red">미처리</span></div>`}).join('');
-        if(!openAS.length)asH='<div style="text-align:center;padding:16px;color:#ADB5BD;font-size:12px">미처리 AS 없음</div>';
-        const delayed=jobs.filter(j=>j.status==='waiting'&&j.date<'2026-03-31').length;
+        // AS 미처리 목록
+        let asH=openAS.concat(inProgressAS).slice(0,5).map(a=>{const w=DB.getById('workers',a.workerId);const sc=a.status==='open'?'tag-red':'tag-orange',st=a.status==='open'?'미처리':'처리중';return `<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #F2F4F6;gap:10px"><div style="flex:1"><div style="font-size:12px;font-weight:600"><span class="tag tag-purple" style="margin-right:4px">${a.code}</span>${a.issue}</div><div style="font-size:11px;color:#8B95A1">${HELPERS.formatDate(a.date)} · ${a.customer} · ${w?.name||'—'}</div></div><span class="tag ${sc}">${st}</span></div>`}).join('');
+        if(!openAS.length&&!inProgressAS.length)asH='<div style="text-align:center;padding:16px;color:#ADB5BD;font-size:12px">미처리 AS 없음</div>';
+        // 완료율 프로그레스바 색상
+        const rateColor=stats.rate>=88?'#00B140':stats.rate>=85?'#FFB800':'#F04452';
         area.innerHTML=`${alert}
-        <div class="kpi-grid">
-            <div class="kpi"><div class="kpi-top"><div class="kpi-label">소속 시공자</div><div class="kpi-icon" style="background:#E8F4FD;color:#0077B6">👷</div></div><div class="kpi-value">${stats.workerCount} <span>명</span></div><div class="kpi-sub">자격증 만료임박 <span class="warn">${certWarns.length}</span></div></div>
-            <div class="kpi"><div class="kpi-top"><div class="kpi-label">이번달 시공</div><div class="kpi-icon" style="background:#E8F8EF;color:#00875A">📋</div></div><div class="kpi-value">${stats.monthlyJobs} <span>건</span></div><div class="kpi-sub">완료 <span class="up">${stats.monthlyDone}</span> · 진행 ${stats.monthlyJobs-stats.monthlyDone-delayed}</div></div>
-            <div class="kpi"><div class="kpi-top"><div class="kpi-label">완료율</div><div class="kpi-icon" style="background:#FFF3E8;color:#D46B08">✅</div></div><div class="kpi-value">${stats.rate} <span>%</span></div></div>
-            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 미처리</div><div class="kpi-icon" style="background:#FFEEF0;color:#F04452">🔧</div></div><div class="kpi-value">${stats.asOpen} <span>건</span></div><div class="kpi-sub">AS율 <span class="${HELPERS.asRateClass(stats.asRate)}">${stats.asRate}%</span></div></div>
+        <div class="kpi-grid-6">
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">월 시공</div><div class="kpi-icon" style="background:#E8F8EF;color:#00875A">📋</div></div><div class="kpi-value">${stats.monthlyJobs} <span>건</span></div><div class="kpi-sub">완료 <span class="up">${stats.monthlyDone}</span> · 잔여 <span class="warn">${remaining}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${stats.rate}%;background:${rateColor}"></div></div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">완료율</div><div class="kpi-icon" style="background:#FFF3E8;color:#D46B08">✅</div></div><div class="kpi-value"><span class="${HELPERS.rateClass(stats.rate)}">${stats.rate}</span> <span>%</span></div><div class="kpi-sub">${delayed?`지연 <span class="down">${delayed}건</span>`:'지연 없음'}</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 요청</div><div class="kpi-icon" style="background:#FFEEF0;color:#F04452">🔧</div></div><div class="kpi-value">${allAS.length} <span>건</span></div><div class="kpi-sub">미처리 <span class="down">${openAS.length}</span> · 처리중 <span class="warn">${inProgressAS.length}</span> · 완료 <span class="up">${resolvedAS.length}</span></div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 처리현황</div><div class="kpi-icon" style="background:#E8F4FD;color:#0077B6">📊</div></div><div class="kpi-value">${allAS.length?Math.round(resolvedAS.length/allAS.length*100):0} <span>%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${allAS.length?Math.round(resolvedAS.length/allAS.length*100):0}%;background:#0077B6"></div></div><div class="kpi-mini">${resolvedAS.length}/${allAS.length} 처리완료</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 발생율</div><div class="kpi-icon" style="background:#F3EAFF;color:#6B21A8">📈</div></div><div class="kpi-value"><span class="${HELPERS.asRateClass(asRate)}">${asRate}</span> <span>%</span></div><div class="kpi-sub">시공 대비 AS 비율</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 재발율</div><div class="kpi-icon" style="background:#FFF3E8;color:#D46B08">🔄</div></div><div class="kpi-value"><span class="${recurRate>0?'down':''}">${recurRate}</span> <span>%</span></div><div class="kpi-sub">동일 현장 반복 ${recurringAS}건</div></div>
         </div>
         <div class="grid-6-4">
             <div class="card"><div class="card-h"><div class="card-t">오늘의 시공 일정</div><div style="display:flex;gap:6px"><span class="card-sub">03.31 · ${todayJobs.length}건</span><button class="btn btn-primary btn-sm" onclick="openModal()">+ 일정 등록</button></div></div>${tl}</div>
-            <div><div class="card"><div class="card-h"><div class="card-t">카테고리별</div></div><div class="chart-box sm"><canvas id="catChart"></canvas></div></div>
-                <div class="card"><div class="card-h"><div class="card-t">최근 AS</div></div>${asH}</div></div>
+            <div><div class="card"><div class="card-h"><div class="card-t">AS 현황</div><div style="display:flex;gap:6px"><button class="btn btn-sm" style="background:#F04452;color:#fff" onclick="openAsModal()">+ AS 등록</button></div></div>${asH}</div>
+                <div class="card"><div class="card-h"><div class="card-t">카테고리별</div></div><div class="chart-box sm"><canvas id="catChart"></canvas></div></div></div>
         </div>
         <div class="grid-2">
             <div class="card"><div class="card-h"><div class="card-t">월별 시공 추이</div></div><div class="chart-box sm"><canvas id="monthChart"></canvas></div></div>
@@ -426,6 +497,58 @@ function savePrivacy(){
     showToast('권한 설정이 저장되었습니다');
     setTimeout(()=>render('settings'),300);
 }
+// ===== AS 등록 =====
+function openAsModal(){
+    const doneJobs=DB.getAll('jobs').filter(j=>j.companyId===cid&&j.status==='done').sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+    const sel=document.getElementById('asOrigJob');
+    sel.innerHTML='<option value="">— 완료된 시공건 선택 —</option>'+doneJobs.map(j=>{const w=DB.getById('workers',j.workerId);return `<option value="${j.id}">${j.date} ${j.time} | ${j.cat} | ${j.customer} | ${w?.name||'—'}</option>`}).join('');
+    document.getElementById('asOrigInfo').style.display='none';
+    document.getElementById('asCat').value='';
+    document.getElementById('asCode').innerHTML='<option>시공건을 선택하세요</option>';
+    document.getElementById('asIssue').value='';
+    document.getElementById('asCustomer').value='';
+    document.getElementById('asPhone').value='';
+    const ws=DB.getAll('workers').filter(w=>w.companyId===cid);
+    document.getElementById('asWorker').innerHTML=ws.map(w=>`<option value="${w.id}">${w.name} (${w.skill})</option>`).join('');
+    document.getElementById('asModal').classList.add('show');
+}
+function closeAsModal(){document.getElementById('asModal').classList.remove('show')}
+function onAsJobSelect(){
+    const jobId=document.getElementById('asOrigJob').value;
+    const j=DB.getById('jobs',jobId);
+    if(!j){document.getElementById('asOrigInfo').style.display='none';return}
+    const w=DB.getById('workers',j.workerId);
+    document.getElementById('asOrigInfo').style.display='block';
+    document.getElementById('asOrigInfo').innerHTML=`<strong>${j.id}</strong> — ${j.date} ${j.time}<br>📁 ${j.cat} · ${j.type||''}<br>📍 ${j.addr}<br>👤 ${j.customer} · ${j.phone}<br>👷 ${w?.name||'—'}`;
+    document.getElementById('asCat').value=j.cat;
+    // AS 코드 로드
+    const codes=AS_CODES[j.cat]||[];
+    document.getElementById('asCode').innerHTML=codes.map(c=>`<option value="${c.code}">${c.code} — ${c.name}</option>`).join('');
+    document.getElementById('asCustomer').value=j.customer;
+    document.getElementById('asPhone').value=j.phone;
+    // 기본 담당자: 원시공 기사
+    if(j.workerId){document.getElementById('asWorker').value=j.workerId}
+}
+function submitAS(){
+    const jobId=document.getElementById('asOrigJob').value;
+    const code=document.getElementById('asCode').value;
+    const issue=document.getElementById('asIssue').value.trim();
+    const workerId=document.getElementById('asWorker').value;
+    if(!jobId){showToast('원시공 건을 선택하세요');return}
+    if(!issue){showToast('증상/이슈를 입력하세요');return}
+    const j=DB.getById('jobs',jobId);
+    const cat=document.getElementById('asCat').value;
+    const customer=document.getElementById('asCustomer').value;
+    const phone=document.getElementById('asPhone').value;
+    const asId=DB.genId('AS');
+    DB.add('asTickets',{id:asId,companyId:cid,origJobId:jobId,workerId:workerId||null,date:new Date().toISOString().substring(0,10),cat,code,issue,customer,phone,status:'open',visitDate:null,resolution:null,createdAt:new Date().toISOString()});
+    // 시공자앱 알림
+    if(workerId){
+        DB.add('notifications',{id:DB.genId('n'),target:workerId,type:'as',title:'AS 건 배정',desc:`${cat} ${code} — ${issue}`,read:false,createdAt:new Date().toISOString()});
+    }
+    closeAsModal();showToast('AS가 접수되었습니다 ('+asId+')');render(currentPage);
+}
+
 DB.listenSync(()=>{render(currentPage)});
 </script>
 </body>
