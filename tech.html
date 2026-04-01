@@ -221,8 +221,8 @@
         </div>
         <div class="form-group">
             <label class="form-label">원시공 선택 <span class="req">*</span> <span id="asJobCount" style="font-weight:400;color:#8B95A1"></span></label>
-            <select class="form-select" id="asOrigJob" onchange="onAsJobSelect()" size="6" style="height:auto"></select>
-            <div class="form-hint">완료된 시공건 중에서 선택 — 월/검색으로 필터링 가능</div>
+            <div id="asJobList" style="max-height:220px;overflow-y:auto;border:1px solid #E5E8EB;border-radius:8px;background:#fff"></div>
+            <input type="hidden" id="asOrigJob">
         </div>
         <div id="asOrigInfo" style="display:none;background:#F7F8FA;border-radius:10px;padding:14px;margin-bottom:14px;font-size:12px;line-height:1.8"></div>
         <div class="form-row">
@@ -536,13 +536,34 @@ function filterAsJobs(){
         const text=`${j.id} ${j.customer} ${j.addr} ${j.cat} ${j.type||''} ${w?.name||''}`.toLowerCase();
         return text.includes(keyword);
     });
-    const sel=document.getElementById('asOrigJob');
-    sel.innerHTML=filtered.length?filtered.map(j=>{const w=DB.getById('workers',j.workerId);return `<option value="${j.id}">${j.date} ${j.time} | ${j.cat} | ${j.customer} | ${w?.name||'—'} | ${j.addr.substring(0,20)}</option>`}).join(''):'<option value="">검색 결과 없음</option>';
+    const list=document.getElementById('asJobList');
+    const selId=document.getElementById('asOrigJob').value;
+    if(!filtered.length){
+        list.innerHTML='<div style="text-align:center;padding:20px;color:#ADB5BD;font-size:12px">검색 결과 없음</div>';
+    } else {
+        list.innerHTML=filtered.map(j=>{
+            const w=DB.getById('workers',j.workerId);
+            const sel=j.id===selId?'background:#E8F4FD;border-left:3px solid #35C5F0':'border-left:3px solid transparent';
+            return `<div onclick="selectAsJob('${j.id}')" style="padding:10px 12px;border-bottom:1px solid #F2F4F6;cursor:pointer;${sel};transition:background .1s" onmouseover="this.style.background='#F7F8FA'" onmouseout="this.style.background='${j.id===selId?'#E8F4FD':'#fff'}'">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="font-size:12px;font-weight:600">${j.date} ${j.time} · <span class="tag tag-blue">${j.cat}</span></span>
+                    <span style="font-size:11px;color:#6B7684">${w?.name||'—'}</span>
+                </div>
+                <div style="font-size:11px;color:#8B95A1;margin-top:3px">${j.customer} · ${j.addr.length>30?j.addr.substring(0,30)+'…':j.addr}</div>
+            </div>`;
+        }).join('');
+    }
     document.getElementById('asJobCount').textContent=`(${filtered.length}건)`;
+}
+function selectAsJob(jobId){
+    document.getElementById('asOrigJob').value=jobId;
+    filterAsJobs(); // 선택 상태 표시 갱신
+    onAsJobSelect();
 }
 function closeAsModal(){document.getElementById('asModal').classList.remove('show')}
 function onAsJobSelect(){
     const jobId=document.getElementById('asOrigJob').value;
+    if(!jobId){document.getElementById('asOrigInfo').style.display='none';return}
     const j=DB.getById('jobs',jobId);
     if(!j){document.getElementById('asOrigInfo').style.display='none';return}
     const w=DB.getById('workers',j.workerId);
