@@ -378,19 +378,15 @@ function render(p){
             <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 발생율</div><div class="kpi-icon" style="background:#F3EAFF;color:#6B21A8">📈</div></div><div class="kpi-value"><span class="${HELPERS.asRateClass(asRate)}">${asRate}</span> <span>%</span></div><div class="kpi-sub">시공 대비 AS 비율</div></div>
             <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 재발율</div><div class="kpi-icon" style="background:#FFF3E8;color:#D46B08">🔄</div></div><div class="kpi-value"><span class="${recurRate>0?'down':''}">${recurRate}</span> <span>%</span></div><div class="kpi-sub">동일 현장 반복 ${recurringAS}건</div></div>
         </div>
-        <div class="grid-6-4">
-            <div class="card"><div class="card-h"><div class="card-t">오늘의 시공 일정</div><div style="display:flex;gap:6px"><span class="card-sub">03.31 · ${todayJobs.length}건</span><button class="btn btn-primary btn-sm" onclick="openModal()">+ 일정 등록</button></div></div>${tl}</div>
-            <div><div class="card"><div class="card-h"><div class="card-t">AS 현황</div><div style="display:flex;gap:6px"><button class="btn btn-sm" style="background:#F04452;color:#fff" onclick="openAsModal()">+ AS 등록</button></div></div>${asH}</div>
-                <div class="card"><div class="card-h"><div class="card-t">카테고리별</div></div><div class="chart-box sm"><canvas id="catChart"></canvas></div></div></div>
-        </div>
         <div class="grid-2">
             <div class="card"><div class="card-h"><div class="card-t">월별 시공 추이</div></div><div class="chart-box sm"><canvas id="monthChart"></canvas></div></div>
-            <div>${calHtml(jobs,'home')}<div style="margin-top:14px">${dayHtml(jobs,calState.selectedDate||'2026-03-31')}</div></div>
+            <div class="card"><div class="card-h"><div class="card-t">AS 현황</div><div style="display:flex;gap:6px"><button class="btn btn-sm" style="background:#F04452;color:#fff" onclick="openAsModal()">+ AS 등록</button></div></div>${asH}</div>
+        </div>
+        <div class="grid-6-4">
+            <div>${calHtml(jobs,'home')}</div>
+            <div class="card" style="display:flex;flex-direction:column"><div class="card-h" style="flex-shrink:0"><div class="card-t">오늘의 시공 일정 <span style="color:#35C5F0;font-weight:700">(${todayJobs.length}건)</span></div><div style="display:flex;gap:6px"><button class="btn btn-primary btn-sm" onclick="openModal()">+ 일정 등록</button></div></div><div style="flex:1;overflow-y:auto;max-height:400px">${tl}</div></div>
         </div>`;
         // Charts
-        const cats={};jobs.filter(j=>j.date?.startsWith('2026-03')).forEach(j=>{cats[j.cat]=(cats[j.cat]||0)+1});
-        const cl=Object.keys(cats),cd=Object.values(cats),co=['#1e40af','#3b82f6','#60a5fa','#93c5fd','#0ea5e9'];
-        if(cl.length)charts.cat=new Chart(document.getElementById('catChart'),{type:'doughnut',data:{labels:cl,datasets:[{data:cd,backgroundColor:co.slice(0,cl.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{font:{size:11,family:'Pretendard'},padding:10,usePointStyle:true}}}}});
         const md={};jobs.forEach(j=>{if(!j.date)return;const m=j.date.substring(0,7);if(!md[m])md[m]={t:0,d:0};md[m].t++;if(j.status==='done')md[m].d++});
         const ms=Object.keys(md).sort().slice(-6);
         if(ms.length)charts.month=new Chart(document.getElementById('monthChart'),{type:'bar',data:{labels:ms.map(m=>m.substring(2)),datasets:[{label:'전체',data:ms.map(m=>md[m].t),backgroundColor:'rgba(53,197,240,.15)',borderColor:'#35C5F0',borderWidth:1.5,borderRadius:4,order:2},{label:'완료',data:ms.map(m=>md[m].d),type:'line',borderColor:'#1e40af',borderWidth:2,pointRadius:3,pointBackgroundColor:'#1e40af',tension:.3,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11,family:'Pretendard'},usePointStyle:true,padding:14}}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'#F2F4F6'}}}}});
