@@ -209,10 +209,20 @@
 <div class="modal-overlay" id="asModal" onclick="if(event.target===this)closeAsModal()">
     <div class="modal">
         <div class="modal-title">🔧 AS 등록 — 완료 건에서 접수</div>
+        <div class="form-row" style="margin-bottom:10px">
+            <div class="form-group">
+                <label class="form-label">월 선택</label>
+                <select class="form-select" id="asMonth" onchange="filterAsJobs()"></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">검색 (고객명/주소/시공번호)</label>
+                <input type="text" class="form-input" id="asSearch" placeholder="검색어 입력" oninput="filterAsJobs()">
+            </div>
+        </div>
         <div class="form-group">
-            <label class="form-label">원시공 선택 <span class="req">*</span></label>
-            <select class="form-select" id="asOrigJob" onchange="onAsJobSelect()"></select>
-            <div class="form-hint">완료된 시공건 중에서 선택</div>
+            <label class="form-label">원시공 선택 <span class="req">*</span> <span id="asJobCount" style="font-weight:400;color:#8B95A1"></span></label>
+            <select class="form-select" id="asOrigJob" onchange="onAsJobSelect()" size="6" style="height:auto"></select>
+            <div class="form-hint">완료된 시공건 중에서 선택 — 월/검색으로 필터링 가능</div>
         </div>
         <div id="asOrigInfo" style="display:none;background:#F7F8FA;border-radius:10px;padding:14px;margin-bottom:14px;font-size:12px;line-height:1.8"></div>
         <div class="form-row">
@@ -498,10 +508,14 @@ function savePrivacy(){
     setTimeout(()=>render('settings'),300);
 }
 // ===== AS 등록 =====
+let _asDoneJobs=[];
 function openAsModal(){
-    const doneJobs=DB.getAll('jobs').filter(j=>j.companyId===cid&&j.status==='done').sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
-    const sel=document.getElementById('asOrigJob');
-    sel.innerHTML='<option value="">— 완료된 시공건 선택 —</option>'+doneJobs.map(j=>{const w=DB.getById('workers',j.workerId);return `<option value="${j.id}">${j.date} ${j.time} | ${j.cat} | ${j.customer} | ${w?.name||'—'}</option>`}).join('');
+    _asDoneJobs=DB.getAll('jobs').filter(j=>j.companyId===cid&&j.status==='done').sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+    // 월 드롭다운: 완료건이 있는 월만
+    const months=[...new Set(_asDoneJobs.map(j=>j.date?.substring(0,7)).filter(Boolean))].sort().reverse();
+    document.getElementById('asMonth').innerHTML='<option value="">전체 월</option>'+months.map(m=>`<option value="${m}">${m.replace('-','년 ')}월</option>`).join('');
+    document.getElementById('asSearch').value='';
+    filterAsJobs();
     document.getElementById('asOrigInfo').style.display='none';
     document.getElementById('asCat').value='';
     document.getElementById('asCode').innerHTML='<option>시공건을 선택하세요</option>';
@@ -511,6 +525,20 @@ function openAsModal(){
     const ws=DB.getAll('workers').filter(w=>w.companyId===cid);
     document.getElementById('asWorker').innerHTML=ws.map(w=>`<option value="${w.id}">${w.name} (${w.skill})</option>`).join('');
     document.getElementById('asModal').classList.add('show');
+}
+function filterAsJobs(){
+    const month=document.getElementById('asMonth').value;
+    const keyword=document.getElementById('asSearch').value.trim().toLowerCase();
+    let filtered=_asDoneJobs;
+    if(month) filtered=filtered.filter(j=>j.date?.startsWith(month));
+    if(keyword) filtered=filtered.filter(j=>{
+        const w=DB.getById('workers',j.workerId);
+        const text=`${j.id} ${j.customer} ${j.addr} ${j.cat} ${j.type||''} ${w?.name||''}`.toLowerCase();
+        return text.includes(keyword);
+    });
+    const sel=document.getElementById('asOrigJob');
+    sel.innerHTML=filtered.length?filtered.map(j=>{const w=DB.getById('workers',j.workerId);return `<option value="${j.id}">${j.date} ${j.time} | ${j.cat} | ${j.customer} | ${w?.name||'—'} | ${j.addr.substring(0,20)}</option>`}).join(''):'<option value="">검색 결과 없음</option>';
+    document.getElementById('asJobCount').textContent=`(${filtered.length}건)`;
 }
 function closeAsModal(){document.getElementById('asModal').classList.remove('show')}
 function onAsJobSelect(){
