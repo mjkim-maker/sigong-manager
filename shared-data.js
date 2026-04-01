@@ -137,6 +137,11 @@ const DEFAULT_ACCOUNTS = [
     { id:'acc-w04', loginId:'moon.gw', password:'1234', name:'문건우', role:'worker', companyId:'comp-001', workerId:'w-004', avatar:'문' },
     { id:'acc-w05', loginId:'park.yh', password:'1234', name:'박영호', role:'worker', companyId:'comp-001', workerId:'w-005', avatar:'박' },
     { id:'acc-w06', loginId:'lee.sm', password:'1234', name:'이수민', role:'worker', companyId:'comp-001', workerId:'w-006', avatar:'이' },
+    { id:'acc-w13', loginId:'song.mj', password:'1234', name:'송민재', role:'worker', companyId:'comp-003', workerId:'w-013', avatar:'송' },
+    { id:'acc-w16', loginId:'baek.jw', password:'1234', name:'백정우', role:'worker', companyId:'comp-003', workerId:'w-016', avatar:'백' },
+    { id:'acc-w17', loginId:'nam.sh', password:'1234', name:'남승환', role:'worker', companyId:'comp-003', workerId:'w-017', avatar:'남' },
+    { id:'acc-w18', loginId:'oh.ys', password:'1234', name:'오영석', role:'worker', companyId:'comp-003', workerId:'w-018', avatar:'오' },
+    { id:'acc-w19', loginId:'shin.dk', password:'1234', name:'신동기', role:'worker', companyId:'comp-003', workerId:'w-019', avatar:'신' },
 ];
 
 const DEFAULT_COMPANIES = [
@@ -167,7 +172,11 @@ const DEFAULT_WORKERS = [
     { id:'w-010', companyId:'comp-001', name:'윤재호', phone:'010-0123-4567', skill:'에어컨', area:'노원/도봉/강북', status:'active', certs:[{name:'냉동기능사',no:'NF-2022-0123',expiry:'2027-07-25'}], rating:4.1 },
     { id:'w-011', companyId:'comp-002', name:'이상훈', phone:'010-1111-2222', skill:'창호', area:'서울 전역', status:'active', certs:[{name:'유리시공기능사',no:'GL-2022-001',expiry:'2027-05-10'}], rating:4.4 },
     { id:'w-012', companyId:'comp-002', name:'김도현', phone:'010-1111-3333', skill:'창호/중문', area:'경기 서부', status:'active', certs:[{name:'유리시공기능사',no:'GL-2021-002',expiry:'2026-08-20'}], rating:4.2 },
-    { id:'w-013', companyId:'comp-003', name:'송민재', phone:'010-2222-4444', skill:'마루', area:'수도권', status:'active', certs:[{name:'목공기능사',no:'WD-2023-001',expiry:'2028-03-15'}], rating:4.5 },
+    { id:'w-013', companyId:'comp-003', name:'송민재', phone:'010-2222-4444', skill:'마루', area:'강남/서초/송파', status:'active', certs:[{name:'목공기능사',no:'WD-2023-001',expiry:'2028-03-15'}], rating:4.5 },
+    { id:'w-016', companyId:'comp-003', name:'백정우', phone:'010-2222-5555', skill:'마루', area:'성남/분당/용인', status:'active', certs:[{name:'목공기능사',no:'WD-2022-045',expiry:'2027-06-20'}], rating:4.3 },
+    { id:'w-017', companyId:'comp-003', name:'남승환', phone:'010-2222-6666', skill:'마루/바닥재', area:'고양/일산/파주', status:'active', certs:[{name:'목공기능사',no:'WD-2021-078',expiry:'2026-05-10'}], rating:4.1 },
+    { id:'w-018', companyId:'comp-003', name:'오영석', phone:'010-2222-7777', skill:'마루', area:'수원/화성/동탄', status:'active', certs:[{name:'목공기능사',no:'WD-2023-112',expiry:'2028-01-25'}], rating:4.4 },
+    { id:'w-019', companyId:'comp-003', name:'신동기', phone:'010-2222-8888', skill:'바닥재', area:'인천/부천', status:'active', certs:[{name:'목공기능사',no:'WD-2020-033',expiry:'2026-04-18'}], rating:3.9 },
     { id:'w-014', companyId:'comp-004', name:'권도윤', phone:'010-3333-5555', skill:'도배', area:'서울/경기', status:'active', certs:[{name:'도배기능사',no:'WL-2022-001',expiry:'2027-09-30'}], rating:4.0 },
     { id:'w-015', companyId:'comp-005', name:'황도현', phone:'010-4444-6666', skill:'에어컨', area:'전국', status:'active', certs:[{name:'냉동기능사',no:'NF-2023-555',expiry:'2028-04-20'}], rating:4.6 },
 ];
@@ -202,8 +211,25 @@ const DEFAULT_JOBS = (() => {
             jobs.push({id:`S-2026-01-${String(idx).padStart(3,'0')}`,companyId:'comp-001',workerId:wid,date:`2026-03-${dStr}`,time,cat,type,addr:rAddr(),customer:rName(),phone:mkPhone(),source:src,extId:src==='api'?`OH-${String(1000+idx)}`:null,status:st,startedAt:sa,completedAt:ca,photos:ph,memo:isAS?'AS: 냉매 부족 의심':'',isAS:isAS||false,...(isAS?{asCode:'AC-01',asIssue:'냉매 부족',origJobId:'S-20260215-034'}:{}),createdAt:`2026-03-${String(Math.max(1,day-3)).padStart(2,'0')}T10:00:00`});
         }
     });
-    // comp-002~012: simplified
-    const others=[['comp-002','w-011','w-012',['창호','중문'],55],['comp-003','w-013',null,['마루','바닥재'],48],['comp-004','w-014',null,['도배','벽지'],38],['comp-005','w-015',null,['에어컨'],35],['comp-006',null,null,['마루'],22],['comp-007',null,null,['마루','타일'],18],['comp-008',null,null,['설비','욕실'],15],['comp-009',null,null,['마루','바닥재'],12],['comp-010',null,null,['마루'],10],['comp-011',null,null,['설비','철거'],8],['comp-012',null,null,['타일','욕실'],6]];
+    // comp-003 (다온이엔지 마루): detailed like comp-001
+    const workers_003 = ['w-013','w-016','w-017','w-018','w-019'];
+    const types_fl = ['강마루 시공','강화마루 시공','원목마루 시공','마루 부분보수','마루 철거+시공'];
+    const types_bd = ['장판 시공','데코타일 시공','비닐타일 시공','바닥재 부분교체'];
+    const addrs_fl = ['서울 강남구 대치동','서울 서초구 잠원동','경기 성남시 분당구','경기 용인시 수지구','경기 고양시 덕양구','서울 마포구 연남동','경기 화성시 동탄','서울 송파구 문정동','경기 수원시 팔달구','인천 연수구 송도','서울 강서구 마곡동','서울 관악구 봉천동','경기 파주시 운정','서울 용산구 한남동','서울 노원구 공릉동','경기 안양시 동안구','서울 성동구 성수동','경기 광명시 철산동','서울 종로구 평창동','경기 하남시 미사동'];
+    workdays.forEach((day,di) => {
+        const dStr=String(day).padStart(2,'0'),cnt=day===31?6:(di%3===0?3:2);
+        for(let j=0;j<cnt;j++){
+            idx++;const wid=workers_003[(idx-1)%5],isMaru=Math.random()>.2,cat=isMaru?'마루':'바닥재',type=isMaru?types_fl[idx%5]:types_bd[idx%4],time=times[j%12],src=Math.random()>.7?'api':'self';
+            let st,sa=null,ca=null,ph=p(0,0,0);
+            if(day<31){st='done';sa=`2026-03-${dStr}T${time}:00`;ca=`2026-03-${dStr}T${String(+time.split(':')[0]+3).padStart(2,'0')}:${time.split(':')[1]}:00`;ph=p(2+Math.floor(Math.random()*2),1+Math.floor(Math.random()*2),2+Math.floor(Math.random()*2));}
+            else if(j<2){st='done';sa=`2026-03-31T${time}:00`;ca=`2026-03-31T${String(+time.split(':')[0]+3).padStart(2,'0')}:${time.split(':')[1]}:00`;ph=p(2,2,3);}
+            else if(j<4){st='progress';sa=`2026-03-31T${time}:00`;ph=p(2,1,0);}
+            else{st='waiting';}
+            jobs.push({id:`S-2026-03-${String(idx).padStart(3,'0')}`,companyId:'comp-003',workerId:wid,date:`2026-03-${dStr}`,time,cat,type,addr:addrs_fl[idx%20],customer:names[idx%20],phone:mkPhone(),source:src,extId:src==='api'?`OH-FL${idx}`:null,status:st,startedAt:sa,completedAt:ca,photos:ph,memo:'',isAS:false,createdAt:`2026-03-${String(Math.max(1,day-2)).padStart(2,'0')}T10:00:00`});
+        }
+    });
+    // comp-002, comp-004~012: simplified (comp-003 removed from here)
+    const others=[['comp-002','w-011','w-012',['창호','중문'],55],['comp-004','w-014',null,['도배','벽지'],38],['comp-005','w-015',null,['에어컨'],35],['comp-006',null,null,['마루'],22],['comp-007',null,null,['마루','타일'],18],['comp-008',null,null,['설비','욕실'],15],['comp-009',null,null,['마루','바닥재'],12],['comp-010',null,null,['마루'],10],['comp-011',null,null,['설비','철거'],8],['comp-012',null,null,['타일','욕실'],6]];
     others.forEach(([cid,w1,w2,cats,cnt])=>{
         for(let i=0;i<cnt;i++){
             const day=workdays[i%workdays.length],dStr=String(day).padStart(2,'0'),isDone=i<Math.round(cnt*.9),cat=cats[i%cats.length];
@@ -222,6 +248,10 @@ const DEFAULT_AS = [
     { id:'AS-0083', companyId:'comp-002', origJobId:'S-2026-02-005', workerId:'w-012', date:'2026-03-18', cat:'중문', code:'DR-01', issue:'레일 소음', customer:'김OO', phone:'010-9999-0006', status:'resolved', visitDate:'2026-03-20', resolution:'레일 윤활', createdAt:'2026-03-18T10:00:00' },
     { id:'AS-0082', companyId:'comp-003', origJobId:'S-2026-03-008', workerId:'w-013', date:'2026-03-27', cat:'마루', code:'FL-01', issue:'마루 들뜸', customer:'박OO', phone:'010-9999-0007', status:'open', visitDate:null, resolution:null, createdAt:'2026-03-27T09:00:00' },
     { id:'AS-0081', companyId:'comp-003', origJobId:'S-2026-03-003', workerId:'w-013', date:'2026-03-12', cat:'마루', code:'FL-04', issue:'마루 소음', customer:'조OO', phone:'010-9999-0008', status:'resolved', visitDate:'2026-03-14', resolution:'하부 보강', createdAt:'2026-03-12T11:00:00' },
+    { id:'AS-0075', companyId:'comp-003', origJobId:'S-2026-03-015', workerId:'w-016', date:'2026-03-29', cat:'마루', code:'FL-02', issue:'강마루 긁힘 다수', customer:'정OO', phone:'010-9999-0014', status:'open', visitDate:null, resolution:null, createdAt:'2026-03-29T10:00:00' },
+    { id:'AS-0074', companyId:'comp-003', origJobId:'S-2026-03-022', workerId:'w-017', date:'2026-03-24', cat:'마루', code:'FL-05', issue:'이음새 벌어짐 3곳', customer:'안OO', phone:'010-9999-0015', status:'in_progress', visitDate:'2026-03-28', resolution:null, createdAt:'2026-03-24T14:00:00' },
+    { id:'AS-0073', companyId:'comp-003', origJobId:'S-2026-03-010', workerId:'w-018', date:'2026-03-18', cat:'바닥재', code:'FL-03', issue:'장판 변색', customer:'송OO', phone:'010-9999-0016', status:'resolved', visitDate:'2026-03-20', resolution:'부분 교체', createdAt:'2026-03-18T09:00:00' },
+    { id:'AS-0072', companyId:'comp-003', origJobId:'S-2026-03-005', workerId:'w-019', date:'2026-03-15', cat:'마루', code:'FL-01', issue:'원목마루 부풀음', customer:'류OO', phone:'010-9999-0017', status:'resolved', visitDate:'2026-03-17', resolution:'습기차단+재시공', createdAt:'2026-03-15T11:00:00' },
     { id:'AS-0080', companyId:'comp-004', origJobId:'S-2026-04-010', workerId:'w-014', date:'2026-03-26', cat:'도배', code:'WP-01', issue:'벽지 이음새 벌어짐', customer:'최OO', phone:'010-9999-0009', status:'in_progress', visitDate:'2026-03-29', resolution:null, createdAt:'2026-03-26T11:00:00' },
     { id:'AS-0079', companyId:'comp-005', origJobId:'S-2026-05-015', workerId:'w-015', date:'2026-03-22', cat:'에어컨', code:'AC-02', issue:'실외기 소음', customer:'한OO', phone:'010-9999-0010', status:'resolved', visitDate:'2026-03-24', resolution:'방진패드 교체', createdAt:'2026-03-22T14:00:00' },
     { id:'AS-0078', companyId:'comp-006', origJobId:'S-2026-06-005', workerId:null, date:'2026-03-23', cat:'마루', code:'FL-02', issue:'마루 긁힘', customer:'오OO', phone:'010-9999-0011', status:'resolved', visitDate:'2026-03-25', resolution:'부분 보수', createdAt:'2026-03-23T10:00:00' },
@@ -237,6 +267,11 @@ const DEFAULT_FEEDBACK = [
     { id:'fb-005', jobId:'S-2026-01-012', companyId:'comp-001', workerId:'w-003', rating:5, comment:'최고입니다!', createdAt:'2026-03-30T12:00:00' },
     { id:'fb-006', jobId:'S-2026-02-001', companyId:'comp-002', workerId:'w-011', rating:4, comment:'잘 해주셨습니다', createdAt:'2026-03-31T13:00:00' },
     { id:'fb-007', jobId:'S-2026-03-001', companyId:'comp-003', workerId:'w-013', rating:5, comment:'마루 시공 너무 만족합니다', createdAt:'2026-03-31T15:00:00' },
+    { id:'fb-008', jobId:'S-2026-03-003', companyId:'comp-003', workerId:'w-016', rating:4, comment:'시공은 깔끔한데 소음이 좀 있어요', createdAt:'2026-03-30T10:00:00' },
+    { id:'fb-009', jobId:'S-2026-03-005', companyId:'comp-003', workerId:'w-017', rating:5, comment:'바닥이 완전히 달라졌어요', createdAt:'2026-03-29T14:00:00' },
+    { id:'fb-010', jobId:'S-2026-03-008', companyId:'comp-003', workerId:'w-018', rating:4, comment:'꼼꼼하게 잘 해주셨습니다', createdAt:'2026-03-28T11:00:00' },
+    { id:'fb-011', jobId:'S-2026-03-010', companyId:'comp-003', workerId:'w-013', rating:3, comment:'마감 부분이 조금 아쉬워요', createdAt:'2026-03-27T16:00:00' },
+    { id:'fb-012', jobId:'S-2026-03-012', companyId:'comp-003', workerId:'w-019', rating:4, comment:'장판 깔끔하게 깔아주셨어요', createdAt:'2026-03-26T13:00:00' },
 ];
 
 const DEFAULT_NOTIFICATIONS = [
@@ -246,6 +281,10 @@ const DEFAULT_NOTIFICATIONS = [
     { id:'n-004', target:'w-002', type:'cert', title:'자격증 만료 임박', desc:'냉동기능사 2026.04.15 만료', read:false, createdAt:'2026-03-30T09:00:00' },
     { id:'n-005', target:'comp-001', type:'alert', title:'자격증 만료 임박 2건', desc:'한지훈(04.15), 최동혁(04.22)', read:false, createdAt:'2026-03-31T08:00:00' },
     { id:'n-006', target:'admin', type:'alert', title:'한빛설비 완료율 저조', desc:'기준치(85%) 미달', read:false, createdAt:'2026-03-31T08:00:00' },
+    { id:'n-007', target:'w-013', type:'schedule', title:'내일 일정 2건', desc:'4월 1일 마루 시공 2건 배정', read:false, createdAt:'2026-03-31T08:00:00' },
+    { id:'n-008', target:'w-019', type:'cert', title:'자격증 만료 임박', desc:'목공기능사 2026.04.18 만료', read:false, createdAt:'2026-03-31T09:00:00' },
+    { id:'n-009', target:'comp-003', type:'as', title:'AS 2건 미처리', desc:'마루 들뜸, 강마루 긁힘 미처리 상태', read:false, createdAt:'2026-03-31T08:30:00' },
+    { id:'n-010', target:'w-016', type:'as', title:'AS 건 배정', desc:'강마루 긁힘 AS 배정', read:false, createdAt:'2026-03-29T10:30:00' },
 ];
 
 const AS_CODES = {
