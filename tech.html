@@ -115,6 +115,23 @@
         .form-hint{font-size:10px;color:#8B95A1;margin-top:3px}
         .form-section{font-size:13px;font-weight:700;padding:12px 0 8px;margin-top:8px;border-top:1px solid #F2F4F6}
         .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid #F2F4F6}
+        .detail-modal{width:640px}
+        .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+        .detail-row{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #F2F4F6;font-size:13px}
+        .detail-row:last-child{border-bottom:none}
+        .detail-label{color:#8B95A1;font-weight:400;min-width:80px}
+        .detail-val{color:#191F28;font-weight:500;text-align:right;word-break:break-all}
+        .detail-section{margin-bottom:16px}
+        .detail-section-title{font-size:13px;font-weight:700;color:#191F28;padding:10px 0 6px;display:flex;align-items:center;gap:6px;border-bottom:2px solid #E5E8EB;margin-bottom:0}
+        .detail-photo-grid{display:flex;gap:8px;padding:12px 0}
+        .detail-photo-box{flex:1;text-align:center;padding:12px;background:#F7F8FA;border-radius:10px}
+        .detail-photo-num{font-size:20px;font-weight:700}
+        .detail-photo-label{font-size:11px;color:#8B95A1;margin-top:2px}
+        .detail-status-bar{display:flex;align-items:center;gap:8px;padding:14px 16px;border-radius:10px;margin-bottom:16px}
+        .detail-status-step{flex:1;text-align:center;padding:8px 0;border-radius:8px;font-size:12px;font-weight:600}
+        .detail-status-step.active{color:#fff}
+        .detail-status-step.inactive{background:#F2F4F6;color:#ADB5BD}
+        .detail-as-item{padding:10px 14px;border:1px solid #FFEEF0;border-radius:10px;margin-top:8px;background:#FFFBFC}
         .login-wrap{position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f6f8;z-index:300;display:flex;align-items:center;justify-content:center}
         .login-wrap.hide{display:none}
         .login-box{background:#fff;border-radius:20px;padding:48px 40px;width:420px;box-shadow:0 8px 40px rgba(0,0,0,.08);text-align:center}
@@ -205,6 +222,11 @@
         <div class="form-group"><label class="form-label">메모</label><input type="text" class="form-input" id="schMemo"></div>
         <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">취소</button><button class="btn btn-primary" onclick="submitSchedule()">등록</button></div>
     </div>
+</div>
+
+<!-- 현장 상세 모달 -->
+<div class="modal-overlay" id="jobDetailModal" onclick="if(event.target===this)closeJobDetail()">
+    <div class="modal detail-modal" id="jobDetailContent"></div>
 </div>
 
 <!-- AS 등록 모달 -->
@@ -330,7 +352,7 @@ function dayHtml(jobs,ds){
     const done=dj.filter(j=>j.status==='done').length;
     let h=dj.map(j=>{const w=DB.getById('workers',j.workerId);let sc=j.status==='done'?'tag-green':j.status==='progress'?'tag-blue':'tag-gray',st=j.status==='done'?'완료':j.status==='progress'?'진행중':'대기';if(j.isAS){sc='tag-orange';st='AS';}
         const p=j.photos||{before:0,during:0,after:0};let pi=(p.before||p.during||p.after)?`<span style="font-size:10px;color:#00875A;margin-left:6px">📸${p.before+p.during+p.after}</span>`:'';
-        return `<div class="day-job"><div class="day-job-time">${j.time}</div><div class="day-job-info"><div class="day-job-title"><span class="tag tag-blue">${j.cat}</span> ${w?.name||'—'} ${j.source==='api'?'<span class="source-api">API</span>':''}${pi}</div><div class="day-job-desc">${j.customer} · ${j.addr}</div></div><div class="day-job-status"><span class="tag ${sc}">${st}</span></div></div>`;
+        return `<div class="day-job" style="cursor:pointer" onclick="openJobDetail('${j.id}')"><div class="day-job-time">${j.time}</div><div class="day-job-info"><div class="day-job-title"><span class="tag tag-blue">${j.cat}</span> ${w?.name||'—'} ${j.source==='api'?'<span class="source-api">API</span>':''}${pi}</div><div class="day-job-desc">${j.customer} · ${j.addr}</div></div><div class="day-job-status"><span class="tag ${sc}">${st}</span></div></div>`;
     }).join('');
     return `<div class="day-detail"><div class="day-detail-title">${label} — ${dj.length}건 (완료 ${done})</div>${h}</div>`;
 }
@@ -364,7 +386,7 @@ function render(p){
         let alert='';if(certWarns.length){const ns=certWarns.map(w=>{const c=w.certs.find(c=>HELPERS.certStatus(c.expiry).days<30);return `${w.name} (${c.name} ${c.expiry.substring(5,10)})`}).join(', ');
             alert=`<div class="alert-banner warning"><div class="alert-icon">⚠️</div><div class="alert-text"><strong>자격증 만료 임박 ${certWarns.length}건</strong> — ${ns}</div></div>`}
         let tl=todayJobs.map(j=>{const w=DB.getById('workers',j.workerId);let dc=j.status==='done'?'#00B140':j.status==='progress'?'#35C5F0':'#D1D6DB',sc=j.status==='done'?'tag-green':j.status==='progress'?'tag-blue':'tag-gray',st=j.status==='done'?'완료':j.status==='progress'?'진행중':'대기';
-            return `<div class="timeline-item"><div class="timeline-time">${j.time}</div><div class="timeline-dot" style="background:${dc}"></div><div class="timeline-content"><div class="timeline-title">${w?.name||'—'} · <span class="tag tag-blue">${j.cat}</span> ${j.source==='api'?'<span class="source-api">API</span>':''}</div><div class="timeline-desc">${j.addr} · ${j.customer} <span class="tag ${sc}" style="margin-left:4px">${st}</span></div></div></div>`;}).join('');
+            return `<div class="timeline-item" style="cursor:pointer" onclick="openJobDetail('${j.id}')"><div class="timeline-time">${j.time}</div><div class="timeline-dot" style="background:${dc}"></div><div class="timeline-content"><div class="timeline-title">${w?.name||'—'} · <span class="tag tag-blue">${j.cat}</span> ${j.source==='api'?'<span class="source-api">API</span>':''}</div><div class="timeline-desc">${j.addr} · ${j.customer} <span class="tag ${sc}" style="margin-left:4px">${st}</span></div></div></div>`;}).join('');
         if(!todayJobs.length)tl='<div style="text-align:center;padding:20px;color:#ADB5BD;font-size:12px">오늘 일정 없음</div>';
         // AS 미처리 목록
         let asH=openAS.concat(inProgressAS).slice(0,5).map(a=>{const w=DB.getById('workers',a.workerId);const sc=a.status==='open'?'tag-red':'tag-orange',st=a.status==='open'?'미처리':'처리중';return `<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #F2F4F6;gap:10px"><div style="flex:1"><div style="font-size:12px;font-weight:600"><span class="tag tag-purple" style="margin-right:4px">${a.code}</span>${a.issue}</div><div style="font-size:11px;color:#8B95A1">${HELPERS.formatDate(a.date)} · ${a.customer} · ${w?.name||'—'}</div></div><span class="tag ${sc}">${st}</span></div>`}).join('');
@@ -408,7 +430,7 @@ function render(p){
         area.innerHTML=`<div class="card"><div class="card-h"><div class="card-t">시공자 목록 (${workers.length}명)</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>이름</th><th>연락처</th><th>전문분야</th><th>담당지역</th><th>자격증 만료</th><th class="r">시공</th><th class="r">완료율</th><th>평점</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
     } else if(p==='schedule'){
         const upcoming=jobs.filter(j=>j.status==='waiting').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-        let ur=upcoming.slice(0,15).map(j=>{const w=DB.getById('workers',j.workerId);return `<tr><td style="font-family:monospace;font-size:11px;color:#6B7684">${j.id}</td><td>${j.date?.substring(5)} ${j.time}</td><td style="font-weight:500">${w?.name||'—'}</td><td><span class="tag tag-blue">${j.cat}</span></td><td style="font-size:11px">${j.addr}</td><td>${j.customer}</td><td>${j.source==='api'?'<span class="source-api">API</span>':'<span class="source-self">자체</span>'}</td></tr>`}).join('');
+        let ur=upcoming.slice(0,15).map(j=>{const w=DB.getById('workers',j.workerId);return `<tr style="cursor:pointer" onclick="openJobDetail('${j.id}')"><td style="font-family:monospace;font-size:11px;color:#6B7684">${j.id}</td><td>${j.date?.substring(5)} ${j.time}</td><td style="font-weight:500">${w?.name||'—'}</td><td><span class="tag tag-blue">${j.cat}</span></td><td style="font-size:11px">${j.addr}</td><td>${j.customer}</td><td>${j.source==='api'?'<span class="source-api">API</span>':'<span class="source-self">자체</span>'}</td></tr>`}).join('');
         area.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button class="btn btn-primary" onclick="openModal()">+ 일정 등록</button></div>
         <div class="grid-6-4">${calHtml(jobs,'schedule')}<div>${dayHtml(jobs,calState.selectedDate||'2026-03-31')}</div></div>
         <div class="card"><div class="card-h"><div class="card-t">대기중 일정</div><div class="card-sub">${upcoming.length}건</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>시공번호</th><th>일시</th><th>시공자</th><th>카테고리</th><th>현장</th><th>고객</th><th>출처</th></tr></thead><tbody>${ur}</tbody></table></div></div>`;
@@ -416,7 +438,8 @@ function render(p){
         const done=jobs.filter(j=>j.status==='done').sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
         const fbs=DB.getAll('feedback');
         let rows=done.slice(0,40).map(j=>{const w=DB.getById('workers',j.workerId),fb=fbs.find(f=>f.jobId===j.id),ph=j.photos||{before:0,during:0,after:0};
-            return `<tr><td style="font-family:monospace;font-size:11px;color:#6B7684">${j.id}</td><td>${j.date?.substring(5)} ${j.time}</td><td style="font-weight:500">${w?.name||'—'}</td><td><span class="tag tag-blue">${j.cat}</span></td><td style="font-size:11px">${j.addr}</td><td>${(ph.before||ph.during||ph.after)?`<span style="font-size:11px;color:#00875A">전${ph.before}/중${ph.during}/후${ph.after}</span>`:'—'}</td><td>${fb?HELPERS.starsHtml(fb.rating,'11px'):'—'}</td></tr>`}).join('');
+
+            return `<tr style="cursor:pointer" onclick="openJobDetail('${j.id}')"><td style="font-family:monospace;font-size:11px;color:#6B7684">${j.id}</td><td>${j.date?.substring(5)} ${j.time}</td><td style="font-weight:500">${w?.name||'—'}</td><td><span class="tag tag-blue">${j.cat}</span></td><td style="font-size:11px">${j.addr}</td><td>${(ph.before||ph.during||ph.after)?`<span style="font-size:11px;color:#00875A">전${ph.before}/중${ph.during}/후${ph.after}</span>`:'—'}</td><td>${fb?HELPERS.starsHtml(fb.rating,'11px'):'—'}</td></tr>`}).join('');
         area.innerHTML=`<div class="card"><div class="card-h"><div class="card-t">시공 이력 (완료)</div><div class="card-sub">${done.length}건</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>시공번호</th><th>일시</th><th>시공자</th><th>카테고리</th><th>현장</th><th>사진</th><th>평점</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
     } else if(p==='as'){
         const tickets=DB.getAll('asTickets').filter(a=>a.companyId===cid).sort((a,b)=>b.date.localeCompare(a.date));
@@ -515,6 +538,105 @@ function savePrivacy(){
     showToast('권한 설정이 저장되었습니다');
     setTimeout(()=>render('settings'),300);
 }
+// ===== 현장 상세 =====
+function openJobDetail(jobId){
+    const j=DB.getById('jobs',jobId);
+    if(!j)return;
+    const w=DB.getById('workers',j.workerId);
+    const comp=DB.getById('companies',j.companyId);
+    const fb=DB.getAll('feedback').find(f=>f.jobId===j.id);
+    const asTickets=DB.getAll('asTickets').filter(a=>a.origJobId===j.id);
+    const photos=j.photos||{before:0,during:0,after:0};
+
+    // 상태 스텝
+    const steps=[{key:'waiting',label:'대기',color:'#D1D6DB'},{key:'progress',label:'진행중',color:'#35C5F0'},{key:'done',label:'완료',color:'#00B140'}];
+    const curIdx=steps.findIndex(s=>s.key===j.status);
+    let statusHtml=steps.map((s,i)=>{
+        const active=i<=curIdx;
+        return `<div class="detail-status-step ${active?'active':'inactive'}" style="${active?'background:'+s.color:''}">${s.label}</div>`;
+    }).join('<div style="color:#D1D6DB">→</div>');
+
+    // 소요시간 계산
+    let durationStr='—';
+    if(j.startedAt&&j.completedAt){
+        const diff=Math.round((new Date(j.completedAt)-new Date(j.startedAt))/60000);
+        durationStr=diff>=60?`${Math.floor(diff/60)}시간 ${diff%60}분`:`${diff}분`;
+    }
+
+    // 사진 색상
+    const pColor=(n)=>n>0?'#00B140':'#D1D6DB';
+
+    let html=`
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div><div style="font-size:17px;font-weight:700">${j.id}</div><div style="font-size:12px;color:#8B95A1;margin-top:2px">${j.date} ${j.time} · ${j.source==='api'?'오늘의집 API':'자체 등록'}</div></div>
+            <button class="btn btn-outline btn-sm" onclick="closeJobDetail()" style="font-size:16px;border:none;padding:8px">✕</button>
+        </div>
+        <div class="detail-status-bar" style="background:#F7F8FA">${statusHtml}</div>
+
+        <div class="detail-section">
+            <div class="detail-section-title">📍 현장 정보</div>
+            <div class="detail-row"><span class="detail-label">카테고리</span><span class="detail-val"><span class="tag tag-blue">${j.cat}</span> ${j.type||''}</span></div>
+            <div class="detail-row"><span class="detail-label">주소</span><span class="detail-val" style="font-size:12px">${j.addr}</span></div>
+            <div class="detail-row"><span class="detail-label">고객</span><span class="detail-val">${j.customer} · ${j.phone}</span></div>
+            ${j.memo?`<div class="detail-row"><span class="detail-label">메모</span><span class="detail-val" style="font-size:12px;color:#6B7684">${j.memo}</span></div>`:''}
+            ${j.extId?`<div class="detail-row"><span class="detail-label">외부 주문번호</span><span class="detail-val" style="font-family:monospace;font-size:12px">${j.extId}</span></div>`:''}
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-section-title">👷 시공자 / 시간</div>
+            <div class="detail-row"><span class="detail-label">시공자</span><span class="detail-val">${w?`${w.name} (${w.skill}) · ${w.phone}`:'미배정'}</span></div>
+            <div class="detail-row"><span class="detail-label">시작</span><span class="detail-val">${j.startedAt?HELPERS.formatDateTime(j.startedAt):'—'}</span></div>
+            <div class="detail-row"><span class="detail-label">완료</span><span class="detail-val">${j.completedAt?HELPERS.formatDateTime(j.completedAt):'—'}</span></div>
+            <div class="detail-row"><span class="detail-label">소요시간</span><span class="detail-val" style="font-weight:700">${durationStr}</span></div>
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-section-title">📸 시공 사진</div>
+            <div class="detail-photo-grid">
+                <div class="detail-photo-box"><div class="detail-photo-num" style="color:${pColor(photos.before)}">${photos.before}</div><div class="detail-photo-label">시공 전</div></div>
+                <div class="detail-photo-box"><div class="detail-photo-num" style="color:${pColor(photos.during)}">${photos.during}</div><div class="detail-photo-label">시공 중</div></div>
+                <div class="detail-photo-box"><div class="detail-photo-num" style="color:${pColor(photos.after)}">${photos.after}</div><div class="detail-photo-label">시공 후</div></div>
+            </div>
+        </div>`;
+
+    // AS 이력
+    if(asTickets.length){
+        html+=`<div class="detail-section"><div class="detail-section-title">🔧 AS 이력 <span style="color:#F04452;font-size:12px">${asTickets.length}건</span></div>`;
+        asTickets.forEach(a=>{
+            const aw=DB.getById('workers',a.workerId);
+            const sc=a.status==='open'?'tag-red':a.status==='in_progress'?'tag-orange':'tag-green';
+            const st=a.status==='open'?'미처리':a.status==='in_progress'?'처리중':'완료';
+            html+=`<div class="detail-as-item">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span class="tag tag-purple">${a.code}</span><span class="tag ${sc}">${st}</span></div>
+                <div style="font-size:12px;font-weight:600;margin-bottom:2px">${a.issue}</div>
+                <div style="font-size:11px;color:#8B95A1">${HELPERS.formatDate(a.date)} · ${aw?.name||'—'}${a.resolution?` · 처리: ${a.resolution}`:''}</div>
+            </div>`;
+        });
+        html+=`</div>`;
+    }
+
+    // 고객 평가
+    if(fb){
+        html+=`<div class="detail-section"><div class="detail-section-title">⭐ 고객 평가</div>
+            <div style="padding:10px 14px;text-align:center">${HELPERS.starsHtml(fb.rating,'18px')}<div style="font-size:13px;color:#4E5968;margin-top:6px">"${fb.comment}"</div></div>
+        </div>`;
+    }
+
+    // 하단 액션
+    html+=`<div style="display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid #F2F4F6">
+        ${j.status==='done'?`<button class="btn btn-sm" style="background:#F04452;color:#fff;flex:1" onclick="closeJobDetail();openAsModalWithJob('${j.id}')">🔧 이 건으로 AS 등록</button>`:''}
+        <button class="btn btn-outline btn-sm" style="flex:1" onclick="closeJobDetail()">닫기</button>
+    </div>`;
+
+    document.getElementById('jobDetailContent').innerHTML=html;
+    document.getElementById('jobDetailModal').classList.add('show');
+}
+function closeJobDetail(){document.getElementById('jobDetailModal').classList.remove('show')}
+function openAsModalWithJob(jobId){
+    openAsModal();
+    setTimeout(()=>{selectAsJob(jobId)},100);
+}
+
 // ===== AS 등록 =====
 let _asDoneJobs=[];
 function openAsModal(){
