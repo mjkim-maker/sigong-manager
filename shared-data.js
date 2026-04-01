@@ -127,7 +127,7 @@ const DEFAULT_ACCOUNTS = [
     { id:'acc-002', loginId:'first-cs', password:'first123', name:'박승현', role:'tech', companyId:'comp-001', avatar:'PS' },
     { id:'acc-003', loginId:'first-mgr', password:'first123', name:'이매니저', role:'tech-mgr', companyId:'comp-001', avatar:'IM' },
     { id:'acc-004', loginId:'juwon', password:'juwon123', name:'최대표', role:'tech', companyId:'comp-002', avatar:'CD' },
-    { id:'acc-005', loginId:'daon', password:'daon123', name:'김대표', role:'tech', companyId:'comp-003', avatar:'KD' },
+    { id:'acc-005', loginId:'yj-tech', password:'yj123', name:'김대표', role:'tech', companyId:'comp-003', avatar:'영' },
     { id:'acc-006', loginId:'worksite', password:'work123', name:'정대표', role:'tech', companyId:'comp-004', avatar:'JD' },
     { id:'acc-007', loginId:'grape', password:'grape123', name:'한대표', role:'tech', companyId:'comp-005', avatar:'HD' },
     { id:'acc-008', loginId:'samton', password:'sam123', name:'오대표', role:'tech', companyId:'comp-006', avatar:'OD' },
@@ -147,7 +147,7 @@ const DEFAULT_ACCOUNTS = [
 const DEFAULT_COMPANIES = [
     { id:'comp-001', name:'퍼스트씨에스', region:'서울/경기', cats:['에어컨','설비'], contact:'02-1234-5678', ceo:'박승현', contractStart:'2024-06-15', contractEnd:'2026-06-14', unitPrice:{'에어컨':180000,'설비':150000}, settleCycle:'월2회(15일,말일)', penalty:50000, status:'active', privacy:{showCustomerName:true, showCustomerPhone:false} },
     { id:'comp-002', name:'주원씨앤아이', region:'서울/경기', cats:['창호','중문'], contact:'02-2345-6789', ceo:'최대표', contractStart:'2024-08-01', contractEnd:'2026-07-31', unitPrice:{'창호':220000,'중문':280000}, settleCycle:'월1회(말일)', penalty:40000, status:'active', privacy:{showCustomerName:true, showCustomerPhone:false} },
-    { id:'comp-003', name:'다온이엔지', region:'수도권', cats:['마루','바닥재'], contact:'031-345-6789', ceo:'김대표', contractStart:'2024-09-01', contractEnd:'2026-08-31', unitPrice:{'마루':120000,'바닥재':95000}, settleCycle:'월2회', penalty:30000, status:'active', privacy:{showCustomerName:true, showCustomerPhone:false} },
+    { id:'comp-003', name:'영진테크', region:'수도권', cats:['마루','바닥재'], contact:'031-345-6789', ceo:'김대표', contractStart:'2024-09-01', contractEnd:'2026-08-31', unitPrice:{'마루':120000,'바닥재':95000}, settleCycle:'월2회', penalty:30000, status:'active', privacy:{showCustomerName:true, showCustomerPhone:false} },
     { id:'comp-004', name:'워크사이트', region:'서울/경기', cats:['도배','벽지'], contact:'02-3456-7890', ceo:'정대표', contractStart:'2024-07-01', contractEnd:'2026-06-30', unitPrice:{'도배':80000,'벽지':80000}, settleCycle:'월1회', penalty:30000, status:'active', privacy:{showCustomerName:true, showCustomerPhone:false} },
     { id:'comp-005', name:'그레이프시스템', region:'전국', cats:['에어컨'], contact:'02-4567-8901', ceo:'한대표', contractStart:'2025-01-01', contractEnd:'2026-12-31', unitPrice:{'에어컨':175000}, settleCycle:'월2회', penalty:50000, status:'active', privacy:{showCustomerName:true, showCustomerPhone:false} },
     { id:'comp-006', name:'삼통기업', region:'서울/경기', cats:['마루'], contact:'02-5678-9012', ceo:'오대표', contractStart:'2024-10-01', contractEnd:'2026-09-30', unitPrice:{'마루':110000}, settleCycle:'월1회', penalty:30000, status:'active', privacy:{showCustomerName:true, showCustomerPhone:false} },
@@ -211,7 +211,7 @@ const DEFAULT_JOBS = (() => {
             jobs.push({id:`S-2026-01-${String(idx).padStart(3,'0')}`,companyId:'comp-001',workerId:wid,date:`2026-03-${dStr}`,time,cat,type,addr:rAddr(),customer:rName(),phone:mkPhone(),source:src,extId:src==='api'?`OH-${String(1000+idx)}`:null,status:st,startedAt:sa,completedAt:ca,photos:ph,memo:isAS?'AS: 냉매 부족 의심':'',isAS:isAS||false,...(isAS?{asCode:'AC-01',asIssue:'냉매 부족',origJobId:'S-20260215-034'}:{}),createdAt:`2026-03-${String(Math.max(1,day-3)).padStart(2,'0')}T10:00:00`});
         }
     });
-    // comp-003 (다온이엔지 마루): detailed like comp-001
+    // comp-003 (영진테크 마루): detailed like comp-001
     const workers_003 = ['w-013','w-016','w-017','w-018','w-019'];
     const types_fl = ['강마루 시공','강화마루 시공','원목마루 시공','마루 부분보수','마루 철거+시공'];
     const types_bd = ['장판 시공','데코타일 시공','비닐타일 시공','바닥재 부분교체'];
