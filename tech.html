@@ -33,8 +33,9 @@
         .kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
         .kpi-label{font-size:12px;color:#6B7684;font-weight:500}
         .kpi-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px}
-        .kpi-value{font-size:26px;font-weight:700;color:#191F28;margin-bottom:3px}
+        .kpi-value{font-size:26px;font-weight:700;color:#191F28 !important;margin-bottom:3px}
         .kpi-value span{font-size:13px;color:#8B95A1;font-weight:400}
+        .kpi-value .up,.kpi-value .down,.kpi-value .warn{color:#191F28 !important}
         .kpi-sub{font-size:11px;color:#8B95A1;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
         .up{color:#00B140;font-weight:600}.down{color:#F04452;font-weight:600}.warn{color:#FF7E36;font-weight:600}
         .card{background:#fff;border-radius:12px;border:1px solid #E5E8EB;padding:20px;margin-bottom:14px}
@@ -130,8 +131,9 @@
         .toast.show{opacity:1}
         .kpi-grid-6{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
         .kpi-mini{font-size:11px;color:#8B95A1;display:flex;align-items:center;gap:3px;margin-top:2px}
-        .progress-bar{height:6px;background:#F2F4F6;border-radius:3px;margin-top:8px;overflow:hidden}
+        .progress-bar{height:6px;background:#F2F4F6;border-radius:3px;margin-top:10px;overflow:hidden}
         .progress-fill{height:100%;border-radius:3px;transition:width .3s}
+        .kpi .kpi-sub{margin-top:8px;min-height:16px}
         .as-register-card{background:#fff;border-radius:12px;border:1px solid #E5E8EB;padding:16px;margin-bottom:14px}
         .as-register-card:hover{border-color:#35C5F0;cursor:pointer}
         @media(max-width:1400px){.kpi-grid-6{grid-template-columns:repeat(3,1fr)}}
@@ -369,27 +371,37 @@ function render(p){
         if(!openAS.length&&!inProgressAS.length)asH='<div style="text-align:center;padding:16px;color:#ADB5BD;font-size:12px">미처리 AS 없음</div>';
         // 완료율 프로그레스바 색상
         const rateColor=stats.rate>=88?'#00B140':stats.rate>=85?'#FFB800':'#F04452';
+        // KPI 프로그레스바 계산
+        const asProcessRate=allAS.length?Math.round(resolvedAS.length/allAS.length*100):0;
+        const asRatePct=Math.min(asRate*5,100); // 20% = 100%바
+        const recurPct=Math.min(recurRate*10,100); // 10% = 100%바
         area.innerHTML=`${alert}
         <div class="kpi-grid-6">
-            <div class="kpi"><div class="kpi-top"><div class="kpi-label">월 시공</div><div class="kpi-icon" style="background:#E8F8EF;color:#00875A">📋</div></div><div class="kpi-value">${stats.monthlyJobs} <span>건</span></div><div class="kpi-sub">완료 <span class="up">${stats.monthlyDone}</span> · 잔여 <span class="warn">${remaining}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${stats.rate}%;background:${rateColor}"></div></div></div>
-            <div class="kpi"><div class="kpi-top"><div class="kpi-label">완료율</div><div class="kpi-icon" style="background:#FFF3E8;color:#D46B08">✅</div></div><div class="kpi-value"><span class="${HELPERS.rateClass(stats.rate)}">${stats.rate}</span> <span>%</span></div><div class="kpi-sub">${delayed?`지연 <span class="down">${delayed}건</span>`:'지연 없음'}</div></div>
-            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 요청</div><div class="kpi-icon" style="background:#FFEEF0;color:#F04452">🔧</div></div><div class="kpi-value">${allAS.length} <span>건</span></div><div class="kpi-sub">미처리 <span class="down">${openAS.length}</span> · 처리중 <span class="warn">${inProgressAS.length}</span> · 완료 <span class="up">${resolvedAS.length}</span></div></div>
-            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 처리현황</div><div class="kpi-icon" style="background:#E8F4FD;color:#0077B6">📊</div></div><div class="kpi-value">${allAS.length?Math.round(resolvedAS.length/allAS.length*100):0} <span>%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${allAS.length?Math.round(resolvedAS.length/allAS.length*100):0}%;background:#0077B6"></div></div><div class="kpi-mini">${resolvedAS.length}/${allAS.length} 처리완료</div></div>
-            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 발생율</div><div class="kpi-icon" style="background:#F3EAFF;color:#6B21A8">📈</div></div><div class="kpi-value"><span class="${HELPERS.asRateClass(asRate)}">${asRate}</span> <span>%</span></div><div class="kpi-sub">시공 대비 AS 비율</div></div>
-            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 재발율</div><div class="kpi-icon" style="background:#FFF3E8;color:#D46B08">🔄</div></div><div class="kpi-value"><span class="${recurRate>0?'down':''}">${recurRate}</span> <span>%</span></div><div class="kpi-sub">동일 현장 반복 ${recurringAS}건</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">월 시공</div><div class="kpi-icon" style="background:#E8F8EF;color:#00875A">📋</div></div><div class="kpi-value" style="color:#191F28">${stats.monthlyJobs} <span>건</span></div><div class="progress-bar"><div class="progress-fill" style="width:${stats.rate}%;background:#00B140"></div></div><div class="kpi-sub">완료 ${stats.monthlyDone} · 잔여 ${remaining}</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">완료율</div><div class="kpi-icon" style="background:#FFF3E8;color:#D46B08">✅</div></div><div class="kpi-value" style="color:#191F28">${stats.rate} <span>%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${stats.rate}%;background:${rateColor}"></div></div><div class="kpi-sub">${delayed?`지연 ${delayed}건`:'지연 없음'}</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 요청</div><div class="kpi-icon" style="background:#FFEEF0;color:#F04452">🔧</div></div><div class="kpi-value" style="color:#191F28">${allAS.length} <span>건</span></div><div class="progress-bar"><div class="progress-fill" style="width:${asProcessRate}%;background:#F04452"></div></div><div class="kpi-sub">미처리 ${openAS.length} · 처리중 ${inProgressAS.length} · 완료 ${resolvedAS.length}</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 처리현황</div><div class="kpi-icon" style="background:#E8F4FD;color:#0077B6">📊</div></div><div class="kpi-value" style="color:#191F28">${asProcessRate} <span>%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${asProcessRate}%;background:#0077B6"></div></div><div class="kpi-sub">${resolvedAS.length}/${allAS.length} 처리완료</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 발생율</div><div class="kpi-icon" style="background:#F3EAFF;color:#6B21A8">📈</div></div><div class="kpi-value" style="color:#191F28">${asRate} <span>%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${asRatePct}%;background:#6B21A8"></div></div><div class="kpi-sub">시공 대비 AS 비율</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">AS 재발율</div><div class="kpi-icon" style="background:#FFF3E8;color:#D46B08">🔄</div></div><div class="kpi-value" style="color:#191F28">${recurRate} <span>%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${recurPct}%;background:#D46B08"></div></div><div class="kpi-sub">동일 현장 반복 ${recurringAS}건</div></div>
         </div>
         <div class="grid-2">
-            <div class="card"><div class="card-h"><div class="card-t">월별 시공 추이</div></div><div class="chart-box sm"><canvas id="monthChart"></canvas></div></div>
+            <div class="card" style="display:flex;flex-direction:column"><div class="card-h" style="flex-shrink:0"><div class="card-t">오늘의 시공 일정 <span style="color:#35C5F0;font-weight:700">(${todayJobs.length}건)</span></div><div style="display:flex;gap:6px"><button class="btn btn-primary btn-sm" onclick="openModal()">+ 일정 등록</button></div></div><div style="flex:1;overflow-y:auto;max-height:320px">${tl}</div></div>
             <div class="card"><div class="card-h"><div class="card-t">AS 현황</div><div style="display:flex;gap:6px"><button class="btn btn-sm" style="background:#F04452;color:#fff" onclick="openAsModal()">+ AS 등록</button></div></div>${asH}</div>
         </div>
-        <div class="grid-6-4">
+        <div class="grid-2">
+            <div class="card"><div class="card-h"><div class="card-t">월별 시공 추이</div></div><div class="chart-box"><canvas id="monthChart"></canvas></div></div>
             <div>${calHtml(jobs,'home')}</div>
-            <div class="card" style="display:flex;flex-direction:column"><div class="card-h" style="flex-shrink:0"><div class="card-t">오늘의 시공 일정 <span style="color:#35C5F0;font-weight:700">(${todayJobs.length}건)</span></div><div style="display:flex;gap:6px"><button class="btn btn-primary btn-sm" onclick="openModal()">+ 일정 등록</button></div></div><div style="flex:1;overflow-y:auto;max-height:400px">${tl}</div></div>
         </div>`;
-        // Charts
+        // Charts — 월별 시공 추이
         const md={};jobs.forEach(j=>{if(!j.date)return;const m=j.date.substring(0,7);if(!md[m])md[m]={t:0,d:0};md[m].t++;if(j.status==='done')md[m].d++});
+        const asM={};DB.getAll('asTickets').filter(a=>a.companyId===cid).forEach(a=>{if(!a.date)return;const m=a.date.substring(0,7);asM[m]=(asM[m]||0)+1});
         const ms=Object.keys(md).sort().slice(-6);
-        if(ms.length)charts.month=new Chart(document.getElementById('monthChart'),{type:'bar',data:{labels:ms.map(m=>m.substring(2)),datasets:[{label:'전체',data:ms.map(m=>md[m].t),backgroundColor:'rgba(53,197,240,.15)',borderColor:'#35C5F0',borderWidth:1.5,borderRadius:4,order:2},{label:'완료',data:ms.map(m=>md[m].d),type:'line',borderColor:'#1e40af',borderWidth:2,pointRadius:3,pointBackgroundColor:'#1e40af',tension:.3,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11,family:'Pretendard'},usePointStyle:true,padding:14}}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'#F2F4F6'}}}}});
+        const mlabels=ms.map(m=>{const[y,mo]=m.split('-');return `${mo}월`});
+        if(ms.length)charts.month=new Chart(document.getElementById('monthChart'),{type:'bar',data:{labels:mlabels,datasets:[
+            {label:'전체 시공',data:ms.map(m=>md[m].t),backgroundColor:'rgba(53,197,240,.2)',borderColor:'#35C5F0',borderWidth:2,borderRadius:6,order:3,barPercentage:.6,categoryPercentage:.7},
+            {label:'완료',data:ms.map(m=>md[m].d),backgroundColor:'rgba(0,177,64,.2)',borderColor:'#00B140',borderWidth:2,borderRadius:6,order:2,barPercentage:.6,categoryPercentage:.7},
+            {label:'AS 발생',data:ms.map(m=>asM[m]||0),type:'line',borderColor:'#F04452',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#fff',pointBorderColor:'#F04452',pointBorderWidth:2.5,pointHoverRadius:6,tension:.4,order:1,fill:false}
+        ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{font:{size:11,family:'Pretendard',weight:'500'},usePointStyle:true,pointStyle:'circle',padding:16}},tooltip:{backgroundColor:'#191F28',titleFont:{family:'Pretendard',size:12,weight:'600'},bodyFont:{family:'Pretendard',size:11},padding:12,cornerRadius:10,displayColors:true,boxPadding:4}},scales:{x:{grid:{display:false},ticks:{font:{family:'Pretendard',size:11,weight:'500'},color:'#6B7684'}},y:{beginAtZero:true,grid:{color:'#F2F4F6',drawBorder:false},ticks:{font:{family:'Pretendard',size:11},color:'#8B95A1',stepSize:5}}}}});
     } else if(p==='workers'){
         let rows=workers.map(w=>{const s=HELPERS.workerStats(w.id),c=w.certs?.[0],cs=c?HELPERS.certStatus(c.expiry):null;
             return `<tr><td style="font-weight:600">${w.name}</td><td>${w.phone}</td><td><span class="tag tag-blue">${w.skill}</span></td><td style="font-size:11px">${w.area}</td><td>${c?`<span class="${cs.cls}">${cs.icon} ${cs.text}</span>`:'—'}</td><td class="r">${s.monthlyJobs}</td><td class="r"><span class="${HELPERS.rateClass(s.rate)}">${s.rate}%</span></td><td>${HELPERS.starsHtml(parseFloat(s.avgRating)||0,'11px')}</td></tr>`}).join('');
