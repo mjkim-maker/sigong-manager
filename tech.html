@@ -255,11 +255,10 @@
 
 <!-- 실측 체크리스트 입력 모달 -->
 <div class="modal-overlay" id="clModal" onclick="if(event.target===this)closeClModal()">
-    <div class="modal" style="width:680px">
+    <div class="modal" style="width:680px;max-height:90vh;overflow-y:auto">
         <div class="modal-title">📋 실측 체크리스트 등록</div>
-        <div id="clFormSteps" style="display:flex;gap:4px;margin-bottom:16px;overflow-x:auto"></div>
         <div id="clFormContent"></div>
-        <div class="modal-actions" id="clFormActions"></div>
+        <div class="modal-actions"><button class="btn btn-outline" onclick="closeClModal()">취소</button><button class="btn btn-primary" style="background:#00B140" onclick="submitChecklist()">✅ 실측 제출</button></div>
     </div>
 </div>
 
@@ -711,81 +710,66 @@ function savePrivacy(){
     setTimeout(()=>render('settings'),300);
 }
 // ===== 실측 체크리스트 =====
-let clStep=0, clTogs={}, clRooms=[], clDanchaList=[];
-const CL_STEPS=['기본정보','차량/출입','면적/자재','걸레받이/바닥','보양','시공방향','실리콘','주방하부','누수','단차','현장진단','서명'];
+let clTogs={}, clRooms=[], clDanchaList=[];
 
 function openChecklistForm(){
-    clStep=0;clTogs={};clRooms=[{name:'거실',w:'',h:''},{name:'복도',w:'',h:''},{name:'주방',w:'',h:''},{name:'방1',w:'',h:''},{name:'방2',w:'',h:''},{name:'방3',w:'',h:''}];clDanchaList=[{from:'현관',to:'거실',method:''}];
-    renderClStep();
+    clTogs={};clRooms=[{name:'거실',w:'',h:''},{name:'복도',w:'',h:''},{name:'주방',w:'',h:''},{name:'방1',w:'',h:''},{name:'방2',w:'',h:''},{name:'방3',w:'',h:''}];clDanchaList=[{from:'현관',to:'거실',method:''}];
+    renderClAll();
     document.getElementById('clModal').classList.add('show');
 }
 function closeClModal(){document.getElementById('clModal').classList.remove('show');}
 
-function renderClStep(){
-    const steps=document.getElementById('clFormSteps');
-    steps.innerHTML=CL_STEPS.map((s,i)=>`<div style="padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;${i===clStep?'background:#35C5F0;color:white':'background:#F2F4F6;color:#8B95A1'}" onclick="clStep=${i};renderClStep()">${i+1}. ${s}</div>`).join('');
-    const c=document.getElementById('clFormContent');
+function clSec(num,title,content){return `<div style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:2px solid #E8F4FD;margin-bottom:12px"><div style="width:22px;height:22px;background:#35C5F0;color:white;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${num}</div><span style="font-size:13px;font-weight:700">${title}</span></div>${content}</div>`;}
+
+function renderClAll(){
     const comp=DB.getById('companies',cid);
     const f=(id,label,type,ph,req,val)=>`<div class="form-group"><label class="form-label">${label}${req?'<span class="req">*</span>':''}</label><input type="${type}" class="form-input" id="cl_${id}" placeholder="${ph||''}" value="${val||''}"></div>`;
-    const sel=(id,label,opts,val)=>`<div class="form-group"><label class="form-label">${label}</label><select class="form-select" id="cl_${id}">${opts.map(o=>`<option value="${o}" ${o===val?'selected':''}>${o}</option>`).join('')}</select></div>`;
-    const togHtml=(key,opts)=>`<div class="form-group"><div style="display:flex;gap:6px;flex-wrap:wrap">${opts.map(o=>`<button style="flex:1;min-width:60px;padding:8px 6px;border:1.5px solid ${clTogs[key]===o?'#35C5F0':'#E5E8EB'};border-radius:8px;background:${clTogs[key]===o?'#E8F4FD':'white'};color:${clTogs[key]===o?'#0077B6':'#6B7684'};font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center" onclick="clTogs['${key}']='${o}';renderClStep()">${o}</button>`).join('')}</div></div>`;
+    const togHtml=(key,opts)=>`<div class="form-group"><div style="display:flex;gap:6px;flex-wrap:wrap">${opts.map(o=>`<button style="flex:1;min-width:60px;padding:8px 6px;border:1.5px solid ${clTogs[key]===o?'#35C5F0':'#E5E8EB'};border-radius:8px;background:${clTogs[key]===o?'#E8F4FD':'white'};color:${clTogs[key]===o?'#0077B6':'#6B7684'};font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center" onclick="clTogs['${key}']='${o}';renderClAll()">${o}</button>`).join('')}</div></div>`;
+    const brands=Object.keys(MARU_SKU).filter(b=>MARU_SKU[b].some(p=>p.c!=='기타비용'));
 
     let html='';
-    if(clStep===0){
-        html=f('companyName','업체명','text','',true,comp?.name||'영진테크')+
+    // 1. 기본정보
+    html+=clSec(1,'기본 정보',
+        f('companyName','업체명','text','',true,comp?.name||'영진테크')+
         `<div class="form-group"><label class="form-label">실측 담당자</label><select class="form-select" id="cl_manager"><option value="">선택</option><option value="최종기">최종기</option><option value="한갑기">한갑기</option></select></div>`+
         `<div class="form-row">${f('measureDate','실측일','date','',true,new Date().toISOString().split('T')[0])}${f('constructDate','시공 예정일','date','',false,'')}</div>`+
-        f('address','현장 주소','text','주소 입력',false,'')+
-        f('addressDetail','상세 주소','text','동/호수',false,'')+
-        f('sitePassword','현장 비밀번호','text','공동현관 등',false,'');
-    } else if(clStep===1){
-        html=`<label class="form-label">차량 사전 등록</label>`+togHtml('carReg',['필요','불필요'])+
-        `<label class="form-label">주차 가능 여부</label>`+togHtml('parking',['가능','불가능'])+
+        f('address','현장 주소','text','주소 입력',false,'')+f('addressDetail','상세 주소','text','동/호수',false,'')+f('sitePassword','현장 비밀번호','text','공동현관 등',false,''));
+    // 2. 차량/출입
+    html+=clSec(2,'차량 / 출입',
+        `<label class="form-label">차량 사전 등록</label>`+togHtml('carReg',['필요','불필요'])+
+        `<label class="form-label">주차</label>`+togHtml('parking',['가능','불가능'])+
         `<label class="form-label">엘리베이터</label>`+togHtml('elevator',['가능','불가능'])+
-        `<div class="form-row">${f('entryTime','입차 가능 시간','time','',false,'')}${f('workEndTime','작업 가능 시간','time','',false,'')}</div>`;
-    } else if(clStep===2){
-        const brands=Object.keys(MARU_SKU).filter(b=>MARU_SKU[b].some(p=>p.c!=='기타비용'));
-        html=`<div class="form-row"><div class="form-group"><label class="form-label">제조사</label><select class="form-select" id="cl_maker" onchange="clOnMaker()"><option value="">선택</option>${brands.map(b=>`<option value="${b}">${b}</option>`).join('')}</select></div><div class="form-group"><label class="form-label">제품</label><select class="form-select" id="cl_product" onchange="clOnProduct()"><option value="">제조사 먼저 선택</option></select></div></div>`+
+        `<div class="form-row">${f('entryTime','입차 시간','time','',false,'')}${f('workEndTime','작업 가능 시간','time','',false,'')}</div>`);
+    // 3. 면적/자재
+    html+=clSec(3,'면적 / 자재',
+        `<div class="form-row"><div class="form-group"><label class="form-label">제조사</label><select class="form-select" id="cl_maker" onchange="clOnMaker()"><option value="">선택</option>${brands.map(b=>`<option value="${b}">${b}</option>`).join('')}</select></div><div class="form-group"><label class="form-label">제품</label><select class="form-select" id="cl_product" onchange="clOnProduct()"><option value="">제조사 먼저 선택</option></select></div></div>`+
         `<div class="form-row"><div class="form-group"><label class="form-label">색상</label><select class="form-select" id="cl_color"><option value="">제품 먼저 선택</option></select></div><div class="form-group"><label class="form-label">규격</label><input type="text" class="form-input" id="cl_spec" readonly style="background:#F7F8FA"></div></div>`+
-        `<div class="form-group"><label class="form-label">실측 입력 (mm)</label><div style="display:grid;grid-template-columns:1fr 1fr 1fr 32px;gap:4px;margin-bottom:4px;font-size:10px;color:#8B95A1;font-weight:600"><span>공간명</span><span>가로(mm)</span><span>세로(mm)</span><span></span></div>`+
-        `<div id="clRoomList">${clRooms.map((r,i)=>`<div style="display:grid;grid-template-columns:1fr 1fr 1fr 32px;gap:4px;margin-bottom:4px"><input class="form-input" style="padding:7px 8px;font-size:12px" value="${r.name}" onchange="clRooms[${i}].name=this.value"><input type="number" class="form-input" style="padding:7px 8px;font-size:12px" placeholder="가로" value="${r.w}" onchange="clRooms[${i}].w=this.value"><input type="number" class="form-input" style="padding:7px 8px;font-size:12px" placeholder="세로" value="${r.h}" onchange="clRooms[${i}].h=this.value"><button style="border:none;background:#F2F4F6;border-radius:6px;cursor:pointer;font-size:14px;color:#ADB5BD" onclick="clRooms.splice(${i},1);renderClStep()">×</button></div>`).join('')}</div>`+
-        `<button style="width:100%;padding:8px;border:1.5px dashed #D1D6DB;border-radius:8px;background:#F7F8FA;color:#0077B6;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px" onclick="clRooms.push({name:'',w:'',h:''});renderClStep()">+ 공간 추가</button></div>`;
-    } else if(clStep===3){
-        html=`<label class="form-label">걸레받이 시공</label>`+togHtml('baseboard',['선시공','후시공','미시공','협의예정'])+
+        `<div class="form-group"><label class="form-label">실측 입력 (mm)</label><div style="display:grid;grid-template-columns:1fr 1fr 1fr 32px;gap:4px;margin-bottom:4px;font-size:10px;color:#8B95A1;font-weight:600"><span>공간명</span><span>가로</span><span>세로</span><span></span></div>`+
+        `<div id="clRoomList">${clRooms.map((r,i)=>`<div style="display:grid;grid-template-columns:1fr 1fr 1fr 32px;gap:4px;margin-bottom:4px"><input class="form-input" style="padding:7px 8px;font-size:12px" value="${r.name}" onchange="clRooms[${i}].name=this.value"><input type="number" class="form-input" style="padding:7px 8px;font-size:12px" placeholder="가로" value="${r.w}" onchange="clRooms[${i}].w=this.value"><input type="number" class="form-input" style="padding:7px 8px;font-size:12px" placeholder="세로" value="${r.h}" onchange="clRooms[${i}].h=this.value"><button style="border:none;background:#F2F4F6;border-radius:6px;cursor:pointer;font-size:14px;color:#ADB5BD" onclick="clRooms.splice(${i},1);renderClAll()">×</button></div>`).join('')}</div>`+
+        `<button style="width:100%;padding:8px;border:1.5px dashed #D1D6DB;border-radius:8px;background:#F7F8FA;color:#0077B6;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px" onclick="clRooms.push({name:'',w:'',h:''});renderClAll()">+ 공간 추가</button></div>`);
+    // 4. 바닥/걸레받이
+    html+=clSec(4,'걸레받이 / 바닥',
+        `<label class="form-label">걸레받이</label>`+togHtml('baseboard',['선시공','후시공','미시공','협의예정'])+
         `<label class="form-label">바닥 상태</label>`+togHtml('floorStatus',['양호','미흡'])+
-        f('floorDetail','바닥 상태 상세','text','상세 내용',false,'')+
-        f('moisture','함수율 (%)','number','0',false,'');
-    } else if(clStep===4){
-        html=`<label class="form-label">보양 시공 여부</label>`+togHtml('protection',['시공','미시공','협의예정'])+
-        f('protectionDetail','보양 범위/특이사항','text','보양 범위',false,'');
-    } else if(clStep===5){
-        html=`<label class="form-label">시공 방향 (거실 메인 샷시 기준)</label>`+togHtml('direction',['정방향','역방향','당일협의'])+
-        f('directionMemo','방향 메모','text','',false,'');
-    } else if(clStep===6){
-        html=`<label class="form-label">실리콘 색상</label>`+togHtml('silicon',['백색','반투명','골색','현장준비','미시공','협의예정']);
-    } else if(clStep===7){
-        html=`<label class="form-label">주방 하부 시공</label>`+togHtml('kitchen',['시공','미시공','확인필요'])+
-        f('kitchenMemo','특이사항','text','',false,'');
-    } else if(clStep===8){
-        html=`<label class="form-label">누수 확인</label>`+togHtml('leak',['이상없음','누수있음','미확인'])+
-        f('leakMemo','누수 메모','text','누수 위치 등',false,'');
-    } else if(clStep===9){
-        html=clDanchaList.map((d,i)=>`<div style="border:1px solid #E5E8EB;border-radius:10px;padding:10px;margin-bottom:8px"><div style="display:grid;grid-template-columns:1fr 1fr 28px;gap:6px;margin-bottom:6px"><input class="form-input" style="padding:7px 8px;font-size:12px" placeholder="위치" value="${d.from}" onchange="clDanchaList[${i}].from=this.value"><input class="form-input" style="padding:7px 8px;font-size:12px" placeholder="상대위치" value="${d.to}" onchange="clDanchaList[${i}].to=this.value"><button style="border:none;background:#F2F4F6;border-radius:6px;cursor:pointer;font-size:12px;color:#ADB5BD" onclick="clDanchaList.splice(${i},1);renderClStep()">×</button></div><div style="display:flex;gap:4px;flex-wrap:wrap">${['프로파일 마감','실리콘 마감','1:1 시공','협의예정','그 외'].map(m=>`<button style="padding:5px 8px;border:1px solid ${d.method===m?'#35C5F0':'#E5E8EB'};border-radius:6px;background:${d.method===m?'#E8F4FD':'white'};color:${d.method===m?'#0077B6':'#6B7684'};font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onclick="clDanchaList[${i}].method='${m}';renderClStep()">${m}</button>`).join('')}</div></div>`).join('')+
-        `<button style="width:100%;padding:8px;border:1.5px dashed #D1D6DB;border-radius:8px;background:#F7F8FA;color:#0077B6;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit" onclick="clDanchaList.push({from:'',to:'',method:''});renderClStep()">+ 단차 위치 추가</button>`;
-    } else if(clStep===10){
-        html=`<div class="form-group"><label class="form-label">현장 진단 결과 / 특이사항</label><textarea class="form-input" id="cl_specialNote" style="min-height:100px" placeholder="바닥 상태, 단차, 구조적 특이사항 등"></textarea></div>`+
+        f('floorDetail','바닥 상세','text','상세 내용',false,'')+f('moisture','함수율 (%)','number','0',false,''));
+    // 5~8 한 줄로
+    html+=clSec(5,'시공 조건',
+        `<div class="form-row"><div class="form-group"><label class="form-label">보양</label>`+togHtml('protection',['시공','미시공','협의예정'])+`</div><div class="form-group"><label class="form-label">시공 방향</label>`+togHtml('direction',['정방향','역방향','당일협의'])+`</div></div>`+
+        `<div class="form-row"><div class="form-group"><label class="form-label">실리콘</label>`+togHtml('silicon',['백색','반투명','골색','현장준비','미시공'])+`</div><div class="form-group"><label class="form-label">주방 하부</label>`+togHtml('kitchen',['시공','미시공','확인필요'])+`</div></div>`+
+        `<label class="form-label">누수 확인</label>`+togHtml('leak',['이상없음','누수있음','미확인'])+f('leakMemo','누수 메모','text','',false,''));
+    // 6. 단차
+    html+=clSec(6,'단차 마감',
+        clDanchaList.map((d,i)=>`<div style="border:1px solid #E5E8EB;border-radius:10px;padding:10px;margin-bottom:8px"><div style="display:grid;grid-template-columns:1fr 1fr 28px;gap:6px;margin-bottom:6px"><input class="form-input" style="padding:7px 8px;font-size:12px" placeholder="위치" value="${d.from}" onchange="clDanchaList[${i}].from=this.value"><input class="form-input" style="padding:7px 8px;font-size:12px" placeholder="상대위치" value="${d.to}" onchange="clDanchaList[${i}].to=this.value"><button style="border:none;background:#F2F4F6;border-radius:6px;cursor:pointer;font-size:12px;color:#ADB5BD" onclick="clDanchaList.splice(${i},1);renderClAll()">×</button></div><div style="display:flex;gap:4px;flex-wrap:wrap">${['프로파일 마감','실리콘 마감','1:1 시공','협의예정','그 외'].map(m=>`<button style="padding:5px 8px;border:1px solid ${d.method===m?'#35C5F0':'#E5E8EB'};border-radius:6px;background:${d.method===m?'#E8F4FD':'white'};color:${d.method===m?'#0077B6':'#6B7684'};font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onclick="clDanchaList[${i}].method='${m}';renderClAll()">${m}</button>`).join('')}</div></div>`).join('')+
+        `<button style="width:100%;padding:8px;border:1.5px dashed #D1D6DB;border-radius:8px;background:#F7F8FA;color:#0077B6;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit" onclick="clDanchaList.push({from:'',to:'',method:''});renderClAll()">+ 단차 추가</button>`);
+    // 7. 진단+서명
+    html+=clSec(7,'현장 진단 / 서명',
+        `<div class="form-group"><label class="form-label">특이사항</label><textarea class="form-input" id="cl_specialNote" style="min-height:80px" placeholder="바닥 상태, 단차, 구조적 특이사항 등"></textarea></div>`+
         `<label class="form-label">공사 진행 여부</label>`+togHtml('construction',['공사 진행 가능','공사 진행 불가능','협의 필요'])+
-        f('constructionMemo','사유/메모','text','',false,'');
-    } else if(clStep===11){
-        html=`<div class="form-group"><label class="form-label">공급사 담당자 서명</label><select class="form-select" id="cl_supplierSign"><option value="">선택</option><option value="최종기">최종기</option><option value="한갑기">한갑기</option></select></div>`+
-        f('customerSign','고객 서명','text','이름 입력',false,'')+
-        f('finalMemo','최종 메모','text','',false,'');
-    }
-    c.innerHTML=html;
-    const acts=document.getElementById('clFormActions');
-    acts.innerHTML=`${clStep>0?'<button class="btn btn-outline" onclick="clStep--;renderClStep()">← 이전</button>':''}
-    <div style="flex:1"></div>
-    ${clStep<11?'<button class="btn btn-primary" onclick="clStep++;renderClStep()">다음 →</button>':'<button class="btn btn-primary" style="background:#00B140" onclick="submitChecklist()">✅ 실측 제출</button>'}`;
+        f('constructionMemo','사유/메모','text','',false,'')+
+        `<div class="form-row"><div class="form-group"><label class="form-label">공급사 서명</label><select class="form-select" id="cl_supplierSign"><option value="">선택</option><option value="최종기">최종기</option><option value="한갑기">한갑기</option></select></div>${f('customerSign','고객 서명','text','이름',false,'')}</div>`+
+        f('finalMemo','최종 메모','text','',false,''));
+
+    document.getElementById('clFormContent').innerHTML=html;
 }
 
 function clOnMaker(){
