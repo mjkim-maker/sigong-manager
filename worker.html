@@ -289,12 +289,6 @@
             <div id="notiList"></div>
         </div>
 
-        <!-- PAGE: 실측 -->
-        <div class="app-page" id="page-checklist">
-            <div style="font-size:14px;font-weight:700;margin-bottom:12px">실측 체크리스트</div>
-            <div id="clWorkerList"></div>
-        </div>
-
         <!-- PAGE: 내정보 -->
         <div class="app-page" id="page-my">
             <div class="profile-card">
@@ -319,7 +313,6 @@
     <div class="bottom-bar">
         <div class="bottom-item active" onclick="switchPage('today',this)"><div class="bottom-icon">🏠</div><div class="bottom-label">오늘</div></div>
         <div class="bottom-item" onclick="switchPage('calendar',this)"><div class="bottom-icon">📅</div><div class="bottom-label">캘린더</div></div>
-        <div class="bottom-item" onclick="switchPage('checklist',this)"><div class="bottom-icon">📋</div><div class="bottom-label">실측</div></div>
         <div class="bottom-item" onclick="switchPage('noti',this)"><div class="bottom-icon"><span class="noti-badge" id="notiBadge">🔔</span></div><div class="bottom-label">알림</div></div>
         <div class="bottom-item" onclick="switchPage('my',this)"><div class="bottom-icon">👤</div><div class="bottom-label">내정보</div></div>
     </div>
@@ -397,7 +390,6 @@ function switchPage(page, el) {
     if (page === 'calendar') renderCalendar();
     if (page === 'noti') renderNotifications();
     if (page === 'my') renderMyPage();
-    if (page === 'checklist') renderWorkerChecklists();
 }
 
 function toggleStatus() {
@@ -550,13 +542,26 @@ function openDetail(jobId) {
             : `<div style="margin-top:8px;text-align:center;padding:8px;color:#8B95A1;font-size:12px;background:#F7F8FA;border-radius:8px">🔒 고객 연락처가 비공개 설정되어 있습니다</div>`}
     </div>`;
 
-    // 체크리스트 버튼
+    // 실측 체크리스트 매칭
+    const matchedCl = DB.getAll('checklists').find(c => c.companyId === j.companyId && c.address && j.addr && (c.address.includes(j.addr.substring(0, 10)) || j.addr.includes((c.address || '').substring(0, 10))));
+    if (matchedCl) {
+        const mDiagCls = matchedCl.construction === '공사 진행 가능' ? 'tag-done' : matchedCl.construction === '공사 진행 불가능' ? 'tag-delay' : 'tag-as';
+        html += `<div class="detail-section" style="border-color:#35C5F0">
+            <div class="detail-section-title">📋 실측 체크리스트</div>
+            <div class="detail-row"><span class="detail-label">자재</span><span class="detail-value">${matchedCl.maker || '-'} ${matchedCl.product || ''}</span></div>
+            <div class="detail-row"><span class="detail-label">면적</span><span class="detail-value">${matchedCl.totalPyeong || 0}평 (필요 ${matchedCl.neededPyeong || '-'}평)</span></div>
+            <div class="detail-row"><span class="detail-label">바닥</span><span class="detail-value">${matchedCl.floorStatus || '-'} · 함수율 ${matchedCl.moisture || '-'}%</span></div>
+            <div class="detail-row"><span class="detail-label">진단</span><span class="detail-value"><span class="tag ${mDiagCls}">${matchedCl.construction || '-'}</span></span></div>
+            <div style="margin-top:8px"><button class="job-btn job-btn-primary" style="width:100%;padding:14px" onclick="showWorkerChecklist('${matchedCl.id}')">📋 실측 결과지 전체 보기</button></div>
+        </div>`;
+    }
+    // 외부 체크리스트 URL
     const comp = DB.getById('companies', j.companyId);
     const checklistUrl = comp?.checklists?.[j.cat];
     if (checklistUrl) {
         html += `<div class="detail-section" style="border-color:#35C5F0">
-            <div class="detail-section-title">📋 실측 체크리스트</div>
-            <button class="job-btn job-btn-primary" style="width:100%;padding:14px" onclick="window.open('${checklistUrl}','_blank')">📋 ${j.cat} 실측 체크리스트 열기</button>
+            <div class="detail-section-title">📋 외부 체크리스트</div>
+            <button class="job-btn job-btn-primary" style="width:100%;padding:14px" onclick="window.open('${checklistUrl}','_blank')">📋 ${j.cat} 체크리스트 열기</button>
         </div>`;
     }
 
@@ -889,42 +894,6 @@ DB.listenSync((key, action, id) => {
         if (currentDetailJobId) openDetail(currentDetailJobId);
     }
 });
-
-// ===== WORKER CHECKLISTS =====
-function renderWorkerChecklists() {
-    if (!currentUser) return;
-    // 시공자가 배정된 시공건의 현장주소와 매칭되는 실측 데이터 조회
-    const myJobs = DB.getAll('jobs').filter(j => j.workerId === currentWorker?.id);
-    const myAddrs = new Set(myJobs.map(j => j.addr));
-    const allCl = DB.getAll('checklists').filter(c => c.companyId === currentUser.companyId);
-    // 같은 회사 실측 데이터 중 내 현장과 매칭되는 것 + 최근 전체도 표시
-    const matched = allCl.filter(c => {
-        for (const addr of myAddrs) {
-            if (c.address && addr && (c.address.includes(addr.substring(0, 10)) || addr.includes((c.address||'').substring(0, 10)))) return true;
-        }
-        return false;
-    });
-    const recent = allCl.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 10);
-    const list = matched.length > 0 ? matched : recent;
-
-    const el = document.getElementById('clWorkerList');
-    if (!list.length) {
-        el.innerHTML = '<div style="text-align:center;padding:40px;color:#ADB5BD;font-size:13px">실측 데이터가 없습니다</div>';
-        return;
-    }
-    el.innerHTML = list.map(c => {
-        const diagCls = c.construction === '공사 진행 가능' ? 'tag-done' : c.construction === '공사 진행 불가능' ? 'tag-delay' : 'tag-as';
-        return `<div class="job-card" onclick="showWorkerChecklist('${c.id}')">
-            <div class="job-card-top">
-                <div><span class="job-time">${c.measureDate || '-'}</span><span class="job-type">실측</span></div>
-                <span class="tag ${diagCls}">${c.construction || '-'}</span>
-            </div>
-            <div class="job-info-row"><span class="job-info-icon">📍</span><span class="job-info-label">현장</span><span class="job-info-value">${(c.address || '').substring(0, 30)}${(c.address || '').length > 30 ? '…' : ''}</span></div>
-            <div class="job-info-row"><span class="job-info-icon">📦</span><span class="job-info-label">자재</span><span class="job-info-value">${c.maker || '-'} ${c.product || ''}</span></div>
-            <div class="job-info-row"><span class="job-info-icon">📐</span><span class="job-info-label">면적</span><span class="job-info-value">${c.totalPyeong || 0}평 (필요 ${c.neededPyeong || '-'}평)</span></div>
-        </div>`;
-    }).join('');
-}
 
 function showWorkerChecklist(clId) {
     const c = DB.getById('checklists', clId);
