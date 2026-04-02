@@ -289,6 +289,12 @@
             <div id="notiList"></div>
         </div>
 
+        <!-- PAGE: 실측 -->
+        <div class="app-page" id="page-checklist">
+            <div style="font-size:14px;font-weight:700;margin-bottom:12px">실측 체크리스트</div>
+            <div id="clWorkerList"></div>
+        </div>
+
         <!-- PAGE: 내정보 -->
         <div class="app-page" id="page-my">
             <div class="profile-card">
@@ -311,8 +317,9 @@
     </div>
 
     <div class="bottom-bar">
-        <div class="bottom-item active" onclick="switchPage('today',this)"><div class="bottom-icon">📋</div><div class="bottom-label">오늘</div></div>
+        <div class="bottom-item active" onclick="switchPage('today',this)"><div class="bottom-icon">🏠</div><div class="bottom-label">오늘</div></div>
         <div class="bottom-item" onclick="switchPage('calendar',this)"><div class="bottom-icon">📅</div><div class="bottom-label">캘린더</div></div>
+        <div class="bottom-item" onclick="switchPage('checklist',this)"><div class="bottom-icon">📋</div><div class="bottom-label">실측</div></div>
         <div class="bottom-item" onclick="switchPage('noti',this)"><div class="bottom-icon"><span class="noti-badge" id="notiBadge">🔔</span></div><div class="bottom-label">알림</div></div>
         <div class="bottom-item" onclick="switchPage('my',this)"><div class="bottom-icon">👤</div><div class="bottom-label">내정보</div></div>
     </div>
@@ -390,6 +397,7 @@ function switchPage(page, el) {
     if (page === 'calendar') renderCalendar();
     if (page === 'noti') renderNotifications();
     if (page === 'my') renderMyPage();
+    if (page === 'checklist') renderWorkerChecklists();
 }
 
 function toggleStatus() {
@@ -881,6 +889,126 @@ DB.listenSync((key, action, id) => {
         if (currentDetailJobId) openDetail(currentDetailJobId);
     }
 });
+
+// ===== WORKER CHECKLISTS =====
+function renderWorkerChecklists() {
+    if (!currentUser) return;
+    // 시공자가 배정된 시공건의 현장주소와 매칭되는 실측 데이터 조회
+    const myJobs = DB.getAll('jobs').filter(j => j.workerId === currentWorker?.id);
+    const myAddrs = new Set(myJobs.map(j => j.addr));
+    const allCl = DB.getAll('checklists').filter(c => c.companyId === currentUser.companyId);
+    // 같은 회사 실측 데이터 중 내 현장과 매칭되는 것 + 최근 전체도 표시
+    const matched = allCl.filter(c => {
+        for (const addr of myAddrs) {
+            if (c.address && addr && (c.address.includes(addr.substring(0, 10)) || addr.includes((c.address||'').substring(0, 10)))) return true;
+        }
+        return false;
+    });
+    const recent = allCl.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 10);
+    const list = matched.length > 0 ? matched : recent;
+
+    const el = document.getElementById('clWorkerList');
+    if (!list.length) {
+        el.innerHTML = '<div style="text-align:center;padding:40px;color:#ADB5BD;font-size:13px">실측 데이터가 없습니다</div>';
+        return;
+    }
+    el.innerHTML = list.map(c => {
+        const diagCls = c.construction === '공사 진행 가능' ? 'tag-done' : c.construction === '공사 진행 불가능' ? 'tag-delay' : 'tag-as';
+        return `<div class="job-card" onclick="showWorkerChecklist('${c.id}')">
+            <div class="job-card-top">
+                <div><span class="job-time">${c.measureDate || '-'}</span><span class="job-type">실측</span></div>
+                <span class="tag ${diagCls}">${c.construction || '-'}</span>
+            </div>
+            <div class="job-info-row"><span class="job-info-icon">📍</span><span class="job-info-label">현장</span><span class="job-info-value">${(c.address || '').substring(0, 30)}${(c.address || '').length > 30 ? '…' : ''}</span></div>
+            <div class="job-info-row"><span class="job-info-icon">📦</span><span class="job-info-label">자재</span><span class="job-info-value">${c.maker || '-'} ${c.product || ''}</span></div>
+            <div class="job-info-row"><span class="job-info-icon">📐</span><span class="job-info-label">면적</span><span class="job-info-value">${c.totalPyeong || 0}평 (필요 ${c.neededPyeong || '-'}평)</span></div>
+        </div>`;
+    }).join('');
+}
+
+function showWorkerChecklist(clId) {
+    const c = DB.getById('checklists', clId);
+    if (!c) return;
+    const rooms = (c.rooms || []).map(r => `<tr><td>${r.name}</td><td>${r.w}×${r.h}mm</td><td>${r.area}m²</td><td>${r.pyeong}평</td></tr>`).join('');
+    const dancha = (c.danchaData || []).filter(d => d.from || d.to).map(d => `<tr><td>${d.from || '-'}</td><td>${d.to || '-'}</td><td>${d.method || '-'}</td></tr>`).join('');
+    const diagCls = c.construction === '공사 진행 가능' ? 'tag-done' : c.construction === '공사 진행 불가능' ? 'tag-delay' : 'tag-as';
+    // 연락처 관련은 블러 처리
+    const addrBlur = c.sitePassword ? '****' : '-';
+
+    let html = `
+        <div class="detail-section" style="background:linear-gradient(135deg,#35C5F0 0%,#1e90d0 100%);border-radius:14px;padding:16px;color:#fff;margin-bottom:12px">
+            <div style="font-size:16px;font-weight:700;margin-bottom:4px">${c.companyName || ''}</div>
+            <div style="font-size:12px;opacity:.8">${c.address || ''}</div>
+            <div style="display:flex;justify-content:space-between;margin-top:10px">
+                <div><div style="font-size:22px;font-weight:700">${c.neededPyeong || '-'}</div><div style="font-size:10px;opacity:.8">필요 평수</div></div>
+                <div style="text-align:right"><div style="font-size:22px;font-weight:700">${c.totalPyeong || 0}</div><div style="font-size:10px;opacity:.8">총 면적(평)</div></div>
+            </div>
+        </div>`;
+
+    // 기본정보 (비밀번호 블러)
+    html += `<div class="detail-section"><div class="detail-section-title">📅 기본 정보</div>
+        <div class="detail-row"><span class="detail-label">실측일</span><span class="detail-value">${c.measureDate || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">시공예정</span><span class="detail-value">${c.constructDate || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">담당자</span><span class="detail-value">${c.manager || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">현장비번</span><span class="detail-value" style="color:#ADB5BD">🔒 비공개</span></div>
+    </div>`;
+
+    // 자재정보
+    html += `<div class="detail-section"><div class="detail-section-title">📦 자재 정보</div>
+        <div class="detail-row"><span class="detail-label">제조사</span><span class="detail-value">${c.maker || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">제품</span><span class="detail-value">${c.product || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">규격</span><span class="detail-value" style="font-family:monospace">${c.productSpec || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">색상</span><span class="detail-value">${c.productColor || '-'}</span></div>
+    </div>`;
+
+    // 실측
+    if (rooms) {
+        html += `<div class="detail-section"><div class="detail-section-title">📐 실측 입력</div>
+            <table style="width:100%;font-size:12px;border-collapse:collapse"><tr style="background:#F2F4F6"><th style="padding:6px 8px;text-align:left;font-size:11px">공간</th><th style="padding:6px 8px;text-align:left;font-size:11px">치수</th><th style="padding:6px 8px;text-align:left;font-size:11px">m²</th><th style="padding:6px 8px;text-align:left;font-size:11px">평</th></tr>${rooms}</table>
+        </div>`;
+    }
+
+    // 체크항목
+    html += `<div class="detail-section"><div class="detail-section-title">✅ 체크리스트</div>
+        <div class="detail-row"><span class="detail-label">차량등록</span><span class="detail-value">${c.carReg || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">주차</span><span class="detail-value">${c.parking || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">엘리베이터</span><span class="detail-value">${c.elevator || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">입차시간</span><span class="detail-value">${c.entryTime || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">걸레받이</span><span class="detail-value">${c.baseboard || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">바닥상태</span><span class="detail-value">${c.floorStatus || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">함수율</span><span class="detail-value">${c.moisture || '-'}%</span></div>
+        <div class="detail-row"><span class="detail-label">보양</span><span class="detail-value">${c.protection || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">시공방향</span><span class="detail-value">${c.direction || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">실리콘</span><span class="detail-value">${c.siliconColor || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">주방하부</span><span class="detail-value">${c.kitchenBase || '-'}</span></div>
+        <div class="detail-row"><span class="detail-label">누수</span><span class="detail-value">${c.leakCheck || '-'}</span></div>
+    </div>`;
+
+    // 단차
+    if (dancha) {
+        html += `<div class="detail-section"><div class="detail-section-title">📏 단차 마감</div>
+            <table style="width:100%;font-size:12px;border-collapse:collapse"><tr style="background:#F2F4F6"><th style="padding:6px 8px;text-align:left;font-size:11px">위치</th><th style="padding:6px 8px;text-align:left;font-size:11px">상대</th><th style="padding:6px 8px;text-align:left;font-size:11px">마감</th></tr>${dancha}</table>
+        </div>`;
+    }
+
+    // 현장진단
+    if (c.specialNote) {
+        html += `<div class="detail-section"><div class="detail-section-title">📝 현장 진단</div>
+            <div style="font-size:12px;color:#6B7684;line-height:1.6;padding:8px 0">${c.specialNote}</div>
+        </div>`;
+    }
+
+    // 공사진행
+    html += `<div style="padding:10px 0"><span class="tag ${diagCls}" style="font-size:13px;padding:6px 14px">${c.construction || '-'}</span>
+        ${c.constructionMemo ? `<div style="font-size:12px;color:#6B7684;margin-top:6px">${c.constructionMemo}</div>` : ''}</div>`;
+
+    document.getElementById('detailTitle').textContent = '실측 결과지';
+    document.getElementById('detailTag').className = 'tag ' + diagCls;
+    document.getElementById('detailTag').textContent = '실측';
+    document.getElementById('detailBody').innerHTML = html;
+    document.getElementById('detailAction').innerHTML = '';
+    document.getElementById('detailScreen').classList.add('show');
+}
 
 // ===== RENDER ALL =====
 function renderAll() {
