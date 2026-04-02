@@ -214,6 +214,17 @@
         <div class="form-group"><label class="form-label">시공자 배정<span class="req">*</span></label><select class="form-select" id="schWorker"></select></div>
         <div class="form-group"><label class="form-label">카테고리<span class="req">*</span></label><select class="form-select" id="schCat"></select></div>
         <div class="form-group"><label class="form-label">시공 유형</label><input type="text" class="form-input" id="schType" placeholder="예: 시스템에어컨 설치"></div>
+        <div id="skuSection" style="display:none">
+            <div class="form-section">제품 선택 (마루)</div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">브랜드</label><select class="form-select" id="skuBrand" onchange="onSkuBrandChange()"><option value="">선택</option></select></div>
+                <div class="form-group"><label class="form-label">제품</label><select class="form-select" id="skuProduct" onchange="onSkuProductChange()"><option value="">브랜드 먼저 선택</option></select></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">옵션 (색상)</label><select class="form-select" id="skuOption"><option value="">제품 먼저 선택</option></select></div>
+                <div class="form-group"><label class="form-label">규격</label><input type="text" class="form-input" id="skuSpec" readonly style="background:#F7F8FA"></div>
+            </div>
+        </div>
         <div class="form-section">현장 / 고객</div>
         <div class="form-group"><label class="form-label">현장 주소<span class="req">*</span></label><input type="text" class="form-input" id="schAddr" placeholder="주소"><div class="form-hint">시공자 앱에서 네비 연결됩니다</div></div>
         <div class="form-row"><div class="form-group"><label class="form-label">고객명<span class="req">*</span></label><input type="text" class="form-input" id="schCustomer"></div><div class="form-group"><label class="form-label">연락처<span class="req">*</span></label><input type="tel" class="form-input" id="schPhone" placeholder="010-0000-0000"></div></div>
@@ -314,18 +325,70 @@ function showToast(m){const t=document.getElementById('toast');t.textContent=m;t
 function openModal(){
     const comp=DB.getById('companies',cid),workers=DB.getAll('workers').filter(w=>w.companyId===cid);
     document.getElementById('schWorker').innerHTML=workers.map(w=>`<option value="${w.id}">${w.name} (${w.skill})</option>`).join('');
-    document.getElementById('schCat').innerHTML=(comp?.cats||[]).map(c=>`<option>${c}</option>`).join('');
+    const catSel=document.getElementById('schCat');
+    catSel.innerHTML=(comp?.cats||[]).map(c=>`<option>${c}</option>`).join('');
     ['schType','schAddr','schCustomer','schPhone','schExtId','schMemo'].forEach(id=>document.getElementById(id).value='');
+    checkSkuSection();
+    catSel.onchange=checkSkuSection;
     document.getElementById('scheduleModal').classList.add('show');
+}
+function checkSkuSection(){
+    const cat=document.getElementById('schCat').value;
+    const isFloor=['마루','바닥재'].includes(cat);
+    document.getElementById('skuSection').style.display=isFloor?'block':'none';
+    if(isFloor){
+        const brandSel=document.getElementById('skuBrand');
+        brandSel.innerHTML='<option value="">선택</option>'+Object.keys(MARU_SKU).filter(b=>{
+            return MARU_SKU[b].some(p=>p.c!=='기타비용');
+        }).map(b=>`<option value="${b}">${b}</option>`).join('');
+        document.getElementById('skuProduct').innerHTML='<option value="">브랜드 먼저 선택</option>';
+        document.getElementById('skuOption').innerHTML='<option value="">제품 먼저 선택</option>';
+        document.getElementById('skuSpec').value='';
+    }
+}
+function onSkuBrandChange(){
+    const brand=document.getElementById('skuBrand').value;
+    const prodSel=document.getElementById('skuProduct');
+    if(!brand||!MARU_SKU[brand]){prodSel.innerHTML='<option value="">브랜드 먼저 선택</option>';return}
+    const products=MARU_SKU[brand].filter(p=>p.c!=='기타비용');
+    prodSel.innerHTML='<option value="">선택</option>'+products.map((p,i)=>`<option value="${i}">${p.n} (${p.c} · ${p.s})</option>`).join('');
+    document.getElementById('skuOption').innerHTML='<option value="">제품 먼저 선택</option>';
+    document.getElementById('skuSpec').value='';
+}
+function onSkuProductChange(){
+    const brand=document.getElementById('skuBrand').value;
+    const idx=document.getElementById('skuProduct').value;
+    if(!brand||idx===''){document.getElementById('skuOption').innerHTML='<option value="">제품 먼저 선택</option>';return}
+    const prod=MARU_SKU[brand].filter(p=>p.c!=='기타비용')[parseInt(idx)];
+    if(!prod)return;
+    document.getElementById('skuSpec').value=prod.s;
+    const optSel=document.getElementById('skuOption');
+    if(prod.o.length){
+        optSel.innerHTML='<option value="">선택</option>'+prod.o.map(o=>`<option value="${o}">${o}</option>`).join('');
+    } else {
+        optSel.innerHTML='<option value="">옵션 없음</option>';
+    }
 }
 function closeModal(){document.getElementById('scheduleModal').classList.remove('show')}
 function submitSchedule(){
     const d=document.getElementById('schDate').value,t=document.getElementById('schTime').value,w=document.getElementById('schWorker').value,
           cat=document.getElementById('schCat').value,addr=document.getElementById('schAddr').value.trim(),cust=document.getElementById('schCustomer').value.trim(),ph=document.getElementById('schPhone').value.trim();
     if(!d||!t||!w||!cat||!addr||!cust||!ph){showToast('필수 항목을 모두 입력하세요');return}
+    // SKU 정보 수집
+    let sku=null;
+    if(['마루','바닥재'].includes(cat)){
+        const brand=document.getElementById('skuBrand').value;
+        const pidx=document.getElementById('skuProduct').value;
+        const option=document.getElementById('skuOption').value;
+        const spec=document.getElementById('skuSpec').value;
+        if(brand&&pidx!==''){
+            const prod=MARU_SKU[brand].filter(p=>p.c!=='기타비용')[parseInt(pidx)];
+            sku={brand,product:prod?.n||'',spec,option:option||'',cat:prod?.c||''};
+        }
+    }
     DB.add('jobs',{id:DB.genId('S'),companyId:cid,workerId:w,date:d,time:t,cat,type:document.getElementById('schType').value.trim()||cat,addr,customer:cust,phone:ph,
         source:document.getElementById('schSource').value,extId:document.getElementById('schExtId').value.trim()||null,status:'waiting',startedAt:null,completedAt:null,photos:{before:0,during:0,after:0},
-        memo:document.getElementById('schMemo').value.trim(),isAS:false,createdAt:new Date().toISOString()});
+        memo:document.getElementById('schMemo').value.trim(),isAS:false,sku:sku,createdAt:new Date().toISOString()});
     closeModal();showToast('일정이 등록되었습니다');render('schedule');
 }
 
@@ -581,6 +644,14 @@ function openJobDetail(jobId){
             ${j.memo?`<div class="detail-row"><span class="detail-label">메모</span><span class="detail-val" style="font-size:12px;color:#6B7684">${j.memo}</span></div>`:''}
             ${j.extId?`<div class="detail-row"><span class="detail-label">외부 주문번호</span><span class="detail-val" style="font-family:monospace;font-size:12px">${j.extId}</span></div>`:''}
         </div>
+        ${j.sku?`<div class="detail-section">
+            <div class="detail-section-title">📦 제품 정보</div>
+            <div class="detail-row"><span class="detail-label">브랜드</span><span class="detail-val" style="font-weight:600">${j.sku.brand}</span></div>
+            <div class="detail-row"><span class="detail-label">제품</span><span class="detail-val">${j.sku.product}</span></div>
+            <div class="detail-row"><span class="detail-label">규격</span><span class="detail-val" style="font-family:monospace">${j.sku.spec}</span></div>
+            ${j.sku.option?`<div class="detail-row"><span class="detail-label">옵션(색상)</span><span class="detail-val">${j.sku.option}</span></div>`:''}
+            <div class="detail-row"><span class="detail-label">분류</span><span class="detail-val"><span class="tag tag-blue">${j.sku.cat}</span></span></div>
+        </div>`:''}
 
         <div class="detail-section">
             <div class="detail-section-title">👷 시공자 / 시간</div>
