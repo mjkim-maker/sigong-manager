@@ -235,13 +235,14 @@
         <div class="form-row"><div class="form-group"><label class="form-label">출처</label><select class="form-select" id="schSource"><option value="self">자체 등록</option><option value="api">오늘의집 API</option></select></div><div class="form-group"><label class="form-label">외부 주문번호</label><input type="text" class="form-input" id="schExtId" placeholder="API 연동 시 자동"></div></div>
         <div class="form-group"><label class="form-label">메모</label><input type="text" class="form-input" id="schMemo"></div>
         <!-- 실측 연결 -->
-        <div class="form-group" style="margin-top:12px">
-            <label class="form-label">📋 실측 체크리스트 연결</label>
-            <select class="form-select" id="schClLink" onchange="onSchClLink()">
-                <option value="">연결 안함</option>
-            </select>
+        <div style="margin-top:12px;padding:14px;background:#F7F8FA;border-radius:10px;border:1px solid #E5E8EB">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:15px">📋</span><span style="font-size:13px;font-weight:700">실측 체크리스트 연결</span></div>
+            <div class="form-row" style="margin-bottom:8px">
+                <div class="form-group" style="margin-bottom:0"><label class="form-label">월 선택</label><select class="form-select" id="schClMonth" onchange="loadSchClList()"></select></div>
+                <div class="form-group" style="margin-bottom:0"><label class="form-label">실측 선택</label><select class="form-select" id="schClLink" onchange="onSchClLink()"><option value="">연결 안함</option></select></div>
+            </div>
             <div class="form-hint">등록된 실측 중 선택하면 시공자앱에서 자동 연결됩니다</div>
-            <div id="schClPreview" style="display:none;margin-top:8px;padding:12px;background:#F7F8FA;border-radius:8px;border:1px solid #E5E8EB;font-size:12px"></div>
+            <div id="schClPreview" style="display:none;margin-top:8px;padding:12px;background:#fff;border-radius:8px;border:1px solid #E5E8EB;font-size:12px"></div>
         </div>
         <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">취소</button><button class="btn btn-primary" onclick="submitSchedule()">등록</button></div>
     </div>
@@ -355,6 +356,20 @@ function doLogin(){
 }
 function go(p,el){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));el.classList.add('active');render(p)}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+function loadSchClList(){
+    const month=document.getElementById('schClMonth').value;
+    const allCls=DB.getAll('checklists').filter(c=>c.companyId===cid).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+    let filtered=allCls;
+    if(month) filtered=filtered.filter(c=>(c.measureDate||'').startsWith(month));
+    const clSel=document.getElementById('schClLink');
+    clSel.innerHTML='<option value="">연결 안함</option>'+filtered.map(c=>{
+        const linked=!!c.jobId;
+        const prefix=linked?'[연결됨] ':'';
+        const style=linked?'color:#ADB5BD':'';
+        return `<option value="${c.id}" style="${style}" ${linked?'disabled':''}>${prefix}${c.measureDate||'-'} | ${(c.address||'').substring(0,18)} | ${c.maker||'-'} ${c.product||''} | ${c.totalPyeong||0}평</option>`;
+    }).join('');
+    document.getElementById('schClPreview').style.display='none';
+}
 function onSchClLink(){
     const clId=document.getElementById('schClLink').value;
     const preview=document.getElementById('schClPreview');
@@ -378,10 +393,11 @@ function openModal(){
     const catSel=document.getElementById('schCat');
     catSel.innerHTML=(comp?.cats||[]).map(c=>`<option>${c}</option>`).join('');
     ['schType','schAddr','schCustomer','schPhone','schExtId','schMemo'].forEach(id=>document.getElementById(id).value='');
-    // 실측 드롭다운 채우기
-    const clSel=document.getElementById('schClLink');
-    const cls=DB.getAll('checklists').filter(c=>c.companyId===cid&&!c.jobId).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
-    clSel.innerHTML='<option value="">연결 안함</option>'+cls.map(c=>`<option value="${c.id}">${c.measureDate||'-'} | ${(c.address||'').substring(0,20)} | ${c.maker||'-'} ${c.product||''} | ${c.totalPyeong||0}평</option>`).join('');
+    // 실측 월 드롭다운 채우기
+    const allCls=DB.getAll('checklists').filter(c=>c.companyId===cid);
+    const clMonths=[...new Set(allCls.map(c=>(c.measureDate||'').substring(0,7)).filter(Boolean))].sort().reverse();
+    document.getElementById('schClMonth').innerHTML='<option value="">전체</option>'+clMonths.map(m=>`<option value="${m}">${m.replace('-','년 ')}월</option>`).join('');
+    loadSchClList();
     document.getElementById('schClPreview').style.display='none';
     checkSkuSection();
     catSel.onchange=checkSkuSection;
