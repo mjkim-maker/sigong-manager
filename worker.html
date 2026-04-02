@@ -543,7 +543,7 @@ function openDetail(jobId) {
     </div>`;
 
     // 실측 체크리스트 매칭
-    const matchedCl = DB.getAll('checklists').find(c => c.companyId === j.companyId && c.address && j.addr && (c.address.includes(j.addr.substring(0, 10)) || j.addr.includes((c.address || '').substring(0, 10))));
+    const matchedCl = DB.getAll('checklists').find(c => c.jobId === j.id);
     if (matchedCl) {
         const mDiagCls = matchedCl.construction === '공사 진행 가능' ? 'tag-done' : matchedCl.construction === '공사 진행 불가능' ? 'tag-delay' : 'tag-as';
         html += `<div class="detail-section" style="border-color:#35C5F0">

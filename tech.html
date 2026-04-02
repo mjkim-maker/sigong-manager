@@ -234,51 +234,14 @@
         <div class="form-section">연동</div>
         <div class="form-row"><div class="form-group"><label class="form-label">출처</label><select class="form-select" id="schSource"><option value="self">자체 등록</option><option value="api">오늘의집 API</option></select></div><div class="form-group"><label class="form-label">외부 주문번호</label><input type="text" class="form-input" id="schExtId" placeholder="API 연동 시 자동"></div></div>
         <div class="form-group"><label class="form-label">메모</label><input type="text" class="form-input" id="schMemo"></div>
-        <!-- 실측 추가 토글 -->
-        <div style="margin-top:12px;padding:14px;background:#F7F8FA;border-radius:10px;border:1px solid #E5E8EB">
-            <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleSchCl()">
-                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px">📋</span><span style="font-size:13px;font-weight:700">실측 체크리스트 추가</span></div>
-                <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">
-                    <input type="checkbox" id="schClToggle" style="opacity:0;width:0;height:0" onchange="toggleSchCl()">
-                    <span id="schClTrack" style="position:absolute;top:0;left:0;right:0;bottom:0;background:#D1D6DB;border-radius:12px;transition:.3s"></span>
-                    <span id="schClThumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 3px rgba(0,0,0,.15)"></span>
-                </label>
-            </div>
-            <div id="schClSection" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid #E5E8EB">
-                <div class="form-group"><label class="form-label">실측 담당자</label><select class="form-select" id="schClManager"><option value="">선택</option><option value="최종기">최종기</option><option value="한갑기">한갑기</option></select></div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">실측일</label><input type="date" class="form-input" id="schClDate"></div>
-                    <div class="form-group"><label class="form-label">현장 비밀번호</label><input type="text" class="form-input" id="schClPw" placeholder="공동현관 등"></div>
-                </div>
-                <div class="form-section" style="font-size:12px">차량 / 출입</div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">차량등록</label><select class="form-select" id="schClCar"><option value="">선택</option><option>필요</option><option>불필요</option></select></div>
-                    <div class="form-group"><label class="form-label">주차</label><select class="form-select" id="schClPark"><option value="">선택</option><option>가능</option><option>불가능</option></select></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">엘리베이터</label><select class="form-select" id="schClElev"><option value="">선택</option><option>가능</option><option>불가능</option></select></div>
-                    <div class="form-group"><label class="form-label">입차시간</label><input type="time" class="form-input" id="schClEntry"></div>
-                </div>
-                <div class="form-section" style="font-size:12px">바닥 / 시공 조건</div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">걸레받이</label><select class="form-select" id="schClBase"><option value="">선택</option><option>선시공</option><option>후시공</option><option>미시공</option><option>협의예정</option></select></div>
-                    <div class="form-group"><label class="form-label">바닥상태</label><select class="form-select" id="schClFloor"><option value="">선택</option><option>양호</option><option>미흡</option></select></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">함수율 (%)</label><input type="number" class="form-input" id="schClMoist" placeholder="0" step="0.1"></div>
-                    <div class="form-group"><label class="form-label">시공방향</label><select class="form-select" id="schClDir"><option value="">선택</option><option>정방향</option><option>역방향</option><option>당일협의</option></select></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">실리콘</label><select class="form-select" id="schClSilicon"><option value="">선택</option><option>백색</option><option>반투명</option><option>골색</option><option>현장준비</option><option>미시공</option></select></div>
-                    <div class="form-group"><label class="form-label">누수확인</label><select class="form-select" id="schClLeak"><option value="">선택</option><option>이상없음</option><option>누수있음</option><option>미확인</option></select></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">보양</label><select class="form-select" id="schClProt"><option value="">선택</option><option>시공</option><option>미시공</option><option>협의예정</option></select></div>
-                    <div class="form-group"><label class="form-label">주방하부</label><select class="form-select" id="schClKitchen"><option value="">선택</option><option>시공</option><option>미시공</option><option>확인필요</option></select></div>
-                </div>
-                <div class="form-group"><label class="form-label">공사진행여부</label><select class="form-select" id="schClConst"><option value="">선택</option><option>공사 진행 가능</option><option>공사 진행 불가능</option><option>협의 필요</option></select></div>
-                <div class="form-group"><label class="form-label">특이사항</label><input type="text" class="form-input" id="schClNote" placeholder="현장 특이사항"></div>
-            </div>
+        <!-- 실측 연결 -->
+        <div class="form-group" style="margin-top:12px">
+            <label class="form-label">📋 실측 체크리스트 연결</label>
+            <select class="form-select" id="schClLink" onchange="onSchClLink()">
+                <option value="">연결 안함</option>
+            </select>
+            <div class="form-hint">등록된 실측 중 선택하면 시공자앱에서 자동 연결됩니다</div>
+            <div id="schClPreview" style="display:none;margin-top:8px;padding:12px;background:#F7F8FA;border-radius:8px;border:1px solid #E5E8EB;font-size:12px"></div>
         </div>
         <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">취소</button><button class="btn btn-primary" onclick="submitSchedule()">등록</button></div>
     </div>
@@ -392,13 +355,22 @@ function doLogin(){
 }
 function go(p,el){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));el.classList.add('active');render(p)}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
-function toggleSchCl(){
-    const cb=document.getElementById('schClToggle');
-    const sec=document.getElementById('schClSection');
-    const on=cb.checked;
-    sec.style.display=on?'block':'none';
-    document.getElementById('schClTrack').style.background=on?'#35C5F0':'#D1D6DB';
-    document.getElementById('schClThumb').style.left=on?'22px':'2px';
+function onSchClLink(){
+    const clId=document.getElementById('schClLink').value;
+    const preview=document.getElementById('schClPreview');
+    if(!clId){preview.style.display='none';return;}
+    const c=DB.getById('checklists',clId);
+    if(!c){preview.style.display='none';return;}
+    const diagC=c.construction==='공사 진행 가능'?'color:#00875A':c.construction==='공사 진행 불가능'?'color:#F04452':'color:#D46B08';
+    preview.style.display='block';
+    preview.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div><span style="color:#8B95A1">담당자:</span> <b>${c.manager||'-'}</b></div>
+        <div><span style="color:#8B95A1">실측일:</span> <b>${c.measureDate||'-'}</b></div>
+        <div><span style="color:#8B95A1">자재:</span> <b>${c.maker||'-'} ${c.product||''}</b></div>
+        <div><span style="color:#8B95A1">면적:</span> <b>${c.totalPyeong||0}평</b> (필요 ${c.neededPyeong||'-'}평)</div>
+        <div><span style="color:#8B95A1">바닥:</span> <b>${c.floorStatus||'-'}</b> · 함수율 ${c.moisture||'-'}%</div>
+        <div><span style="color:#8B95A1">진단:</span> <b style="${diagC}">${c.construction||'-'}</b></div>
+    </div>`;
 }
 function openModal(){
     const comp=DB.getById('companies',cid),workers=DB.getAll('workers').filter(w=>w.companyId===cid);
@@ -406,9 +378,11 @@ function openModal(){
     const catSel=document.getElementById('schCat');
     catSel.innerHTML=(comp?.cats||[]).map(c=>`<option>${c}</option>`).join('');
     ['schType','schAddr','schCustomer','schPhone','schExtId','schMemo'].forEach(id=>document.getElementById(id).value='');
-    // 실측 토글 초기화
-    const clTog=document.getElementById('schClToggle');if(clTog){clTog.checked=false;toggleSchCl();}
-    ['schClManager','schClDate','schClPw','schClCar','schClPark','schClElev','schClEntry','schClBase','schClFloor','schClMoist','schClDir','schClSilicon','schClLeak','schClProt','schClKitchen','schClConst','schClNote'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    // 실측 드롭다운 채우기
+    const clSel=document.getElementById('schClLink');
+    const cls=DB.getAll('checklists').filter(c=>c.companyId===cid&&!c.jobId).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+    clSel.innerHTML='<option value="">연결 안함</option>'+cls.map(c=>`<option value="${c.id}">${c.measureDate||'-'} | ${(c.address||'').substring(0,20)} | ${c.maker||'-'} ${c.product||''} | ${c.totalPyeong||0}평</option>`).join('');
+    document.getElementById('schClPreview').style.display='none';
     checkSkuSection();
     catSel.onchange=checkSkuSection;
     document.getElementById('scheduleModal').classList.add('show');
@@ -471,28 +445,12 @@ function submitSchedule(){
     DB.add('jobs',{id:jobId,companyId:cid,workerId:w,date:d,time:t,cat,type:document.getElementById('schType').value.trim()||cat,addr,customer:cust,phone:ph,
         source:document.getElementById('schSource').value,extId:document.getElementById('schExtId').value.trim()||null,status:'waiting',startedAt:null,completedAt:null,photos:{before:0,during:0,after:0},
         memo:document.getElementById('schMemo').value.trim(),isAS:false,sku:sku,createdAt:new Date().toISOString()});
-    // 실측 동시 저장
-    if(document.getElementById('schClToggle').checked){
-        const comp=DB.getById('companies',cid);
-        const gv=(id)=>document.getElementById(id)?.value||'';
-        const construction=gv('schClConst');
-        DB.add('checklists',{
-            id:DB.genId('CL'),companyId:cid,companyName:comp?.name||'',jobId:jobId,
-            manager:gv('schClManager'),measureDate:gv('schClDate')||d,constructDate:d,
-            address:addr,sitePassword:gv('schClPw'),
-            carReg:gv('schClCar'),parking:gv('schClPark'),elevator:gv('schClElev'),entryTime:gv('schClEntry'),workEndTime:'',
-            maker:sku?.brand||'',product:sku?.product||'',productSpec:sku?.spec||'',productColor:sku?.option||'',
-            totalAreaM2:0,totalPyeong:'0',neededPyeong:'0',rooms:[],
-            baseboard:gv('schClBase'),floorStatus:gv('schClFloor'),floorDetail:'',moisture:gv('schClMoist'),
-            protection:gv('schClProt'),protectionDetail:'',direction:gv('schClDir'),directionMemo:'',
-            siliconColor:gv('schClSilicon'),kitchenBase:gv('schClKitchen'),kitchenMemo:'',
-            leakCheck:gv('schClLeak'),leakMemo:'',danchaData:[],
-            specialNote:gv('schClNote'),construction:construction,constructionMemo:'',
-            supplierSign:gv('schClManager'),customerSign:cust,finalMemo:'',
-            createdAt:new Date().toISOString(),status:construction==='공사 진행 가능'?'completed':'pending'
-        });
+    // 실측 연결
+    const clLinkId=document.getElementById('schClLink').value;
+    if(clLinkId){
+        DB.update('checklists',clLinkId,{jobId:jobId});
     }
-    closeModal();showToast(document.getElementById('schClToggle').checked?'일정 + 실측이 등록되었습니다':'일정이 등록되었습니다');render('schedule');
+    closeModal();showToast(clLinkId?'일정 등록 + 실측 연결 완료':'일정이 등록되었습니다');render('schedule');
 }
 
 // Calendar helpers
