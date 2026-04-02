@@ -16,6 +16,10 @@ const firebaseConfig = {
 
 let firebaseApp, firebaseDb;
 
+// Google Sheets 백업 URL (Apps Script 웹앱 — 실측 데이터 백업용)
+// 설정 방법: Apps Script에서 doPost를 배포 후 URL을 여기에 입력
+const SHEETS_BACKUP_URL = '';
+
 function initFirebase() {
     firebaseApp = firebase.initializeApp(firebaseConfig);
     firebaseDb = firebase.database();
@@ -82,6 +86,16 @@ const DB = {
 
     add(key, record) {
         firebaseDb.ref(key + '/' + record.id).set(record);
+        // Google Sheets 백업 (실측 데이터만)
+        if (key === 'checklists' && SHEETS_BACKUP_URL) {
+            try {
+                fetch(SHEETS_BACKUP_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(record)
+                }).catch(() => {});
+            } catch(e) {}
+        }
         return record;
     },
 
