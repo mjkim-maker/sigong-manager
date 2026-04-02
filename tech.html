@@ -190,6 +190,9 @@
         <div class="nav-item" onclick="go('schedule',this)"><span class="ico">📅</span> 일정 등록</div>
         <div class="nav-item" onclick="go('history',this)"><span class="ico">📋</span> 시공 이력</div>
         <div class="nav-item" onclick="go('as',this)"><span class="ico">🔧</span> AS 관리</div>
+        <div class="nav-group">실측</div>
+        <div class="nav-item" onclick="go('checklist',this)"><span class="ico">📋</span> 실측 체크리스트</div>
+        <div class="nav-item" onclick="go('clDash',this)"><span class="ico">📊</span> 실측 현황</div>
         <div class="nav-group">설정</div>
         <div class="nav-item" onclick="go('settings',this)"><span class="ico">⚙️</span> 시공자 권한설정</div>
     </nav>
@@ -238,6 +241,27 @@
 <!-- 현장 상세 모달 -->
 <div class="modal-overlay" id="jobDetailModal" onclick="if(event.target===this)closeJobDetail()">
     <div class="modal detail-modal" id="jobDetailContent"></div>
+</div>
+
+<!-- 실측 체크리스트 입력 모달 -->
+<div class="modal-overlay" id="clModal" onclick="if(event.target===this)closeClModal()">
+    <div class="modal" style="width:680px">
+        <div class="modal-title">📋 실측 체크리스트 등록</div>
+        <div id="clFormSteps" style="display:flex;gap:4px;margin-bottom:16px;overflow-x:auto"></div>
+        <div id="clFormContent"></div>
+        <div class="modal-actions" id="clFormActions"></div>
+    </div>
+</div>
+
+<!-- 실측 상세 보기 모달 -->
+<div class="modal-overlay" id="clViewModal" onclick="if(event.target===this)closeClView()">
+    <div class="modal" style="width:700px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div class="modal-title" style="margin-bottom:0">📋 실측 결과지</div>
+            <button class="btn btn-outline btn-sm" onclick="closeClView()">✕</button>
+        </div>
+        <div id="clViewContent"></div>
+    </div>
 </div>
 
 <!-- AS 등록 모달 -->
@@ -301,7 +325,7 @@
 <script src="shared-data.js"></script>
 <script>
 let currentUser=null, cid=null, charts={}, calState={year:2026,month:2,selectedDate:'2026-03-31'};
-const titles={home:'대시보드',workers:'시공자 관리',schedule:'일정 등록',history:'시공 이력',as:'AS 관리',settings:'시공자 권한설정'};
+const titles={home:'대시보드',workers:'시공자 관리',schedule:'일정 등록',history:'시공 이력',as:'AS 관리',checklist:'실측 체크리스트',clDash:'실측 현황',settings:'시공자 권한설정'};
 
 DB.init();
 DB.seedIfEmpty();
@@ -565,6 +589,38 @@ function render(p){
         </div>`;
         // 체크리스트 URL 렌더
         renderChecklistSettings();
+    } else if(p==='checklist'){
+        // 실측 체크리스트 입력 폼
+        const cls=DB.getAll('checklists').filter(c=>c.companyId===cid).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+        const comp=DB.getById('companies',cid);
+        let recent=cls.slice(0,5).map(c=>{
+            const diagC=c.construction==='공사 진행 가능'?'tag-green':c.construction==='공사 진행 불가능'?'tag-red':'tag-orange';
+            return `<tr style="cursor:pointer" onclick="viewChecklist('${c.id}')"><td style="font-size:11px;color:var(--c-txt2,#8B95A1)">${c.measureDate||'-'}</td><td style="font-weight:600">${c.manager||'-'}</td><td style="font-size:11px">${(c.address||'').substring(0,25)}${(c.address||'').length>25?'…':''}</td><td><span class="tag tag-blue">${c.maker||'-'}</span></td><td style="font-weight:600">${c.totalPyeong||0}평</td><td><span class="tag ${diagC}">${c.construction||'-'}</span></td></tr>`;
+        }).join('');
+        if(!recent) recent='<tr><td colspan="6" style="text-align:center;padding:20px;color:#ADB5BD">아직 실측 기록이 없습니다</td></tr>';
+        area.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button class="btn btn-primary" onclick="openChecklistForm()">+ 실측 등록</button></div>
+        <div class="card"><div class="card-h"><div class="card-t">최근 실측 기록</div><div class="card-sub">${cls.length}건</div></div>
+        <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>실측일</th><th>담당자</th><th>현장주소</th><th>제조사</th><th>면적</th><th>공사진행</th></tr></thead><tbody>${recent}</tbody></table></div></div>`;
+    } else if(p==='clDash'){
+        // 실측 현황 대시보드
+        const cs=HELPERS.checklistStats(cid);
+        const cls=DB.getAll('checklists').filter(c=>c.companyId===cid);
+        const byManager={};cls.forEach(c=>{const m=c.manager||'미입력';byManager[m]=(byManager[m]||0)+1;});
+        const byBrand={};cls.forEach(c=>{if(c.maker)byBrand[c.maker]=(byBrand[c.maker]||0)+1;});
+        const mgrRows=Object.entries(byManager).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F2F4F6"><span style="font-weight:600">${n}</span><span style="font-weight:700;color:#0077B6">${c}건</span></div>`).join('');
+        const brdRows=Object.entries(byBrand).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F2F4F6"><span class="tag tag-blue">${n}</span><span style="font-weight:700">${c}건</span></div>`).join('');
+        area.innerHTML=`
+        <div class="kpi-grid-6" style="grid-template-columns:repeat(5,1fr)">
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">총 실측</div><div class="kpi-icon" style="background:#E8F4FD;color:#0077B6">📋</div></div><div class="kpi-value" style="color:#191F28">${cs.total} <span>건</span></div><div class="progress-bar"><div class="progress-fill" style="width:100%;background:#0077B6"></div></div><div class="kpi-sub">이번달 ${cs.monthly}건</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">시공 가능</div><div class="kpi-icon" style="background:#E8F8EF;color:#00875A">✅</div></div><div class="kpi-value" style="color:#191F28">${cs.ok} <span>건</span></div><div class="progress-bar"><div class="progress-fill" style="width:${cs.total?Math.round(cs.ok/cs.total*100):0}%;background:#00B140"></div></div><div class="kpi-sub">${cs.total?Math.round(cs.ok/cs.total*100):0}%</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">협의/불가</div><div class="kpi-icon" style="background:#FFEEF0;color:#F04452">⚠️</div></div><div class="kpi-value" style="color:#191F28">${cs.hold+cs.ng} <span>건</span></div><div class="progress-bar"><div class="progress-fill" style="width:${cs.total?Math.round((cs.hold+cs.ng)/cs.total*100):0}%;background:#F04452"></div></div><div class="kpi-sub">협의 ${cs.hold} · 불가 ${cs.ng}</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">평균 면적</div><div class="kpi-icon" style="background:#F3EAFF;color:#6B21A8">📐</div></div><div class="kpi-value" style="color:#191F28">${cs.avgArea} <span>m²</span></div><div class="progress-bar"><div class="progress-fill" style="width:60%;background:#6B21A8"></div></div><div class="kpi-sub">평균 함수율 ${cs.avgMoist}%</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">주의 현장</div><div class="kpi-icon" style="background:#FFF3E8;color:#D46B08">🔔</div></div><div class="kpi-value" style="color:#191F28">${cs.leak+cs.floorBad} <span>건</span></div><div class="progress-bar"><div class="progress-fill" style="width:${cs.total?Math.round((cs.leak+cs.floorBad)/cs.total*100):0}%;background:#D46B08"></div></div><div class="kpi-sub">누수 ${cs.leak} · 바닥미흡 ${cs.floorBad}</div></div>
+        </div>
+        <div class="grid-2">
+            <div class="card"><div class="card-h"><div class="card-t">담당자별 실측</div></div>${mgrRows||'<div style="text-align:center;padding:20px;color:#ADB5BD">데이터 없음</div>'}</div>
+            <div class="card"><div class="card-h"><div class="card-t">브랜드별 실측</div></div>${brdRows||'<div style="text-align:center;padding:20px;color:#ADB5BD">데이터 없음</div>'}</div>
+        </div>`;
     }
 }
 function renderChecklistSettings(){
@@ -601,6 +657,172 @@ function savePrivacy(){
     showToast('권한 설정이 저장되었습니다');
     setTimeout(()=>render('settings'),300);
 }
+// ===== 실측 체크리스트 =====
+let clStep=0, clTogs={}, clRooms=[], clDanchaList=[];
+const CL_STEPS=['기본정보','차량/출입','면적/자재','걸레받이/바닥','보양','시공방향','실리콘','주방하부','누수','단차','현장진단','서명'];
+
+function openChecklistForm(){
+    clStep=0;clTogs={};clRooms=[{name:'거실',w:'',h:''},{name:'복도',w:'',h:''},{name:'주방',w:'',h:''},{name:'방1',w:'',h:''},{name:'방2',w:'',h:''},{name:'방3',w:'',h:''}];clDanchaList=[{from:'현관',to:'거실',method:''}];
+    renderClStep();
+    document.getElementById('clModal').classList.add('show');
+}
+function closeClModal(){document.getElementById('clModal').classList.remove('show');}
+
+function renderClStep(){
+    const steps=document.getElementById('clFormSteps');
+    steps.innerHTML=CL_STEPS.map((s,i)=>`<div style="padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;${i===clStep?'background:#35C5F0;color:white':'background:#F2F4F6;color:#8B95A1'}" onclick="clStep=${i};renderClStep()">${i+1}. ${s}</div>`).join('');
+    const c=document.getElementById('clFormContent');
+    const comp=DB.getById('companies',cid);
+    const f=(id,label,type,ph,req,val)=>`<div class="form-group"><label class="form-label">${label}${req?'<span class="req">*</span>':''}</label><input type="${type}" class="form-input" id="cl_${id}" placeholder="${ph||''}" value="${val||''}"></div>`;
+    const sel=(id,label,opts,val)=>`<div class="form-group"><label class="form-label">${label}</label><select class="form-select" id="cl_${id}">${opts.map(o=>`<option value="${o}" ${o===val?'selected':''}>${o}</option>`).join('')}</select></div>`;
+    const togHtml=(key,opts)=>`<div class="form-group"><div style="display:flex;gap:6px;flex-wrap:wrap">${opts.map(o=>`<button style="flex:1;min-width:60px;padding:8px 6px;border:1.5px solid ${clTogs[key]===o?'#35C5F0':'#E5E8EB'};border-radius:8px;background:${clTogs[key]===o?'#E8F4FD':'white'};color:${clTogs[key]===o?'#0077B6':'#6B7684'};font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center" onclick="clTogs['${key}']='${o}';renderClStep()">${o}</button>`).join('')}</div></div>`;
+
+    let html='';
+    if(clStep===0){
+        html=f('companyName','업체명','text','',true,comp?.name||'영진테크')+
+        `<div class="form-group"><label class="form-label">실측 담당자</label><select class="form-select" id="cl_manager"><option value="">선택</option><option value="최종기">최종기</option><option value="한갑기">한갑기</option></select></div>`+
+        `<div class="form-row">${f('measureDate','실측일','date','',true,new Date().toISOString().split('T')[0])}${f('constructDate','시공 예정일','date','',false,'')}</div>`+
+        f('address','현장 주소','text','주소 입력',false,'')+
+        f('addressDetail','상세 주소','text','동/호수',false,'')+
+        f('sitePassword','현장 비밀번호','text','공동현관 등',false,'');
+    } else if(clStep===1){
+        html=`<label class="form-label">차량 사전 등록</label>`+togHtml('carReg',['필요','불필요'])+
+        `<label class="form-label">주차 가능 여부</label>`+togHtml('parking',['가능','불가능'])+
+        `<label class="form-label">엘리베이터</label>`+togHtml('elevator',['가능','불가능'])+
+        `<div class="form-row">${f('entryTime','입차 가능 시간','time','',false,'')}${f('workEndTime','작업 가능 시간','time','',false,'')}</div>`;
+    } else if(clStep===2){
+        const brands=Object.keys(MARU_SKU).filter(b=>MARU_SKU[b].some(p=>p.c!=='기타비용'));
+        html=`<div class="form-row"><div class="form-group"><label class="form-label">제조사</label><select class="form-select" id="cl_maker" onchange="clOnMaker()"><option value="">선택</option>${brands.map(b=>`<option value="${b}">${b}</option>`).join('')}</select></div><div class="form-group"><label class="form-label">제품</label><select class="form-select" id="cl_product" onchange="clOnProduct()"><option value="">제조사 먼저 선택</option></select></div></div>`+
+        `<div class="form-row"><div class="form-group"><label class="form-label">색상</label><select class="form-select" id="cl_color"><option value="">제품 먼저 선택</option></select></div><div class="form-group"><label class="form-label">규격</label><input type="text" class="form-input" id="cl_spec" readonly style="background:#F7F8FA"></div></div>`+
+        `<div class="form-group"><label class="form-label">실측 입력 (mm)</label><div style="display:grid;grid-template-columns:1fr 1fr 1fr 32px;gap:4px;margin-bottom:4px;font-size:10px;color:#8B95A1;font-weight:600"><span>공간명</span><span>가로(mm)</span><span>세로(mm)</span><span></span></div>`+
+        `<div id="clRoomList">${clRooms.map((r,i)=>`<div style="display:grid;grid-template-columns:1fr 1fr 1fr 32px;gap:4px;margin-bottom:4px"><input class="form-input" style="padding:7px 8px;font-size:12px" value="${r.name}" onchange="clRooms[${i}].name=this.value"><input type="number" class="form-input" style="padding:7px 8px;font-size:12px" placeholder="가로" value="${r.w}" onchange="clRooms[${i}].w=this.value"><input type="number" class="form-input" style="padding:7px 8px;font-size:12px" placeholder="세로" value="${r.h}" onchange="clRooms[${i}].h=this.value"><button style="border:none;background:#F2F4F6;border-radius:6px;cursor:pointer;font-size:14px;color:#ADB5BD" onclick="clRooms.splice(${i},1);renderClStep()">×</button></div>`).join('')}</div>`+
+        `<button style="width:100%;padding:8px;border:1.5px dashed #D1D6DB;border-radius:8px;background:#F7F8FA;color:#0077B6;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px" onclick="clRooms.push({name:'',w:'',h:''});renderClStep()">+ 공간 추가</button></div>`;
+    } else if(clStep===3){
+        html=`<label class="form-label">걸레받이 시공</label>`+togHtml('baseboard',['선시공','후시공','미시공','협의예정'])+
+        `<label class="form-label">바닥 상태</label>`+togHtml('floorStatus',['양호','미흡'])+
+        f('floorDetail','바닥 상태 상세','text','상세 내용',false,'')+
+        f('moisture','함수율 (%)','number','0',false,'');
+    } else if(clStep===4){
+        html=`<label class="form-label">보양 시공 여부</label>`+togHtml('protection',['시공','미시공','협의예정'])+
+        f('protectionDetail','보양 범위/특이사항','text','보양 범위',false,'');
+    } else if(clStep===5){
+        html=`<label class="form-label">시공 방향 (거실 메인 샷시 기준)</label>`+togHtml('direction',['정방향','역방향','당일협의'])+
+        f('directionMemo','방향 메모','text','',false,'');
+    } else if(clStep===6){
+        html=`<label class="form-label">실리콘 색상</label>`+togHtml('silicon',['백색','반투명','골색','현장준비','미시공','협의예정']);
+    } else if(clStep===7){
+        html=`<label class="form-label">주방 하부 시공</label>`+togHtml('kitchen',['시공','미시공','확인필요'])+
+        f('kitchenMemo','특이사항','text','',false,'');
+    } else if(clStep===8){
+        html=`<label class="form-label">누수 확인</label>`+togHtml('leak',['이상없음','누수있음','미확인'])+
+        f('leakMemo','누수 메모','text','누수 위치 등',false,'');
+    } else if(clStep===9){
+        html=clDanchaList.map((d,i)=>`<div style="border:1px solid #E5E8EB;border-radius:10px;padding:10px;margin-bottom:8px"><div style="display:grid;grid-template-columns:1fr 1fr 28px;gap:6px;margin-bottom:6px"><input class="form-input" style="padding:7px 8px;font-size:12px" placeholder="위치" value="${d.from}" onchange="clDanchaList[${i}].from=this.value"><input class="form-input" style="padding:7px 8px;font-size:12px" placeholder="상대위치" value="${d.to}" onchange="clDanchaList[${i}].to=this.value"><button style="border:none;background:#F2F4F6;border-radius:6px;cursor:pointer;font-size:12px;color:#ADB5BD" onclick="clDanchaList.splice(${i},1);renderClStep()">×</button></div><div style="display:flex;gap:4px;flex-wrap:wrap">${['프로파일 마감','실리콘 마감','1:1 시공','협의예정','그 외'].map(m=>`<button style="padding:5px 8px;border:1px solid ${d.method===m?'#35C5F0':'#E5E8EB'};border-radius:6px;background:${d.method===m?'#E8F4FD':'white'};color:${d.method===m?'#0077B6':'#6B7684'};font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onclick="clDanchaList[${i}].method='${m}';renderClStep()">${m}</button>`).join('')}</div></div>`).join('')+
+        `<button style="width:100%;padding:8px;border:1.5px dashed #D1D6DB;border-radius:8px;background:#F7F8FA;color:#0077B6;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit" onclick="clDanchaList.push({from:'',to:'',method:''});renderClStep()">+ 단차 위치 추가</button>`;
+    } else if(clStep===10){
+        html=`<div class="form-group"><label class="form-label">현장 진단 결과 / 특이사항</label><textarea class="form-input" id="cl_specialNote" style="min-height:100px" placeholder="바닥 상태, 단차, 구조적 특이사항 등"></textarea></div>`+
+        `<label class="form-label">공사 진행 여부</label>`+togHtml('construction',['공사 진행 가능','공사 진행 불가능','협의 필요'])+
+        f('constructionMemo','사유/메모','text','',false,'');
+    } else if(clStep===11){
+        html=`<div class="form-group"><label class="form-label">공급사 담당자 서명</label><select class="form-select" id="cl_supplierSign"><option value="">선택</option><option value="최종기">최종기</option><option value="한갑기">한갑기</option></select></div>`+
+        f('customerSign','고객 서명','text','이름 입력',false,'')+
+        f('finalMemo','최종 메모','text','',false,'');
+    }
+    c.innerHTML=html;
+    const acts=document.getElementById('clFormActions');
+    acts.innerHTML=`${clStep>0?'<button class="btn btn-outline" onclick="clStep--;renderClStep()">← 이전</button>':''}
+    <div style="flex:1"></div>
+    ${clStep<11?'<button class="btn btn-primary" onclick="clStep++;renderClStep()">다음 →</button>':'<button class="btn btn-primary" style="background:#00B140" onclick="submitChecklist()">✅ 실측 제출</button>'}`;
+}
+
+function clOnMaker(){
+    const m=document.getElementById('cl_maker')?.value;
+    const s=document.getElementById('cl_product');
+    if(!s)return;s.innerHTML='<option value="">선택</option>';
+    if(MARU_SKU[m])MARU_SKU[m].filter(p=>p.c!=='기타비용').forEach((p,i)=>s.add(new Option(`${p.n} (${p.c} · ${p.s})`,i)));
+    if(document.getElementById('cl_color'))document.getElementById('cl_color').innerHTML='<option value="">제품 먼저 선택</option>';
+    if(document.getElementById('cl_spec'))document.getElementById('cl_spec').value='';
+}
+function clOnProduct(){
+    const m=document.getElementById('cl_maker')?.value;
+    const idx=document.getElementById('cl_product')?.value;
+    if(!m||idx==='')return;
+    const prod=MARU_SKU[m].filter(p=>p.c!=='기타비용')[parseInt(idx)];
+    if(!prod)return;
+    if(document.getElementById('cl_spec'))document.getElementById('cl_spec').value=prod.s;
+    const cs=document.getElementById('cl_color');
+    if(cs){cs.innerHTML='<option value="">선택</option>';prod.o.forEach(o=>cs.add(new Option(o,o)));}
+}
+
+function submitChecklist(){
+    const gv=(id)=>document.getElementById('cl_'+id)?.value||'';
+    const PY=3.3058;
+    const rooms=clRooms.filter(r=>r.w&&r.h).map(r=>{const w=parseFloat(r.w)||0,h=parseFloat(r.h)||0;const sqm=w*h/1e6;return{name:r.name||'-',w,h,area:sqm.toFixed(2),pyeong:(sqm/PY).toFixed(2)};});
+    const totalM2=rooms.reduce((s,r)=>s+parseFloat(r.area),0);
+    const totalPy=(totalM2/PY).toFixed(2);
+    const neededPy=(totalM2/PY*1.1).toFixed(2);
+    // 제품 정보
+    const maker=gv('maker');
+    const prodIdx=gv('product');
+    let productName='',productSpec='',productColor='';
+    if(maker&&prodIdx!==''){
+        const prod=MARU_SKU[maker]?.filter(p=>p.c!=='기타비용')[parseInt(prodIdx)];
+        if(prod){productName=prod.n;productSpec=prod.s;}
+    }
+    productColor=gv('color');
+
+    const record={
+        id:DB.genId('CL'),companyId:cid,companyName:gv('companyName')||'영진테크',
+        manager:gv('manager'),measureDate:gv('measureDate'),constructDate:gv('constructDate'),
+        address:(gv('address')+' '+gv('addressDetail')).trim(),sitePassword:gv('sitePassword'),
+        carReg:clTogs.carReg||'',parking:clTogs.parking||'',elevator:clTogs.elevator||'',
+        entryTime:gv('entryTime'),workEndTime:gv('workEndTime'),
+        maker,product:productName,productSpec,productColor,
+        totalAreaM2:Math.round(totalM2*100)/100,totalPyeong:totalPy,neededPyeong:neededPy,
+        rooms,baseboard:clTogs.baseboard||'',floorStatus:clTogs.floorStatus||'',
+        floorDetail:gv('floorDetail'),moisture:gv('moisture'),
+        protection:clTogs.protection||'',protectionDetail:gv('protectionDetail'),
+        direction:clTogs.direction||'',directionMemo:gv('directionMemo'),
+        siliconColor:clTogs.silicon||'',kitchenBase:clTogs.kitchen||'',kitchenMemo:gv('kitchenMemo'),
+        leakCheck:clTogs.leak||'',leakMemo:gv('leakMemo'),
+        danchaData:clDanchaList.filter(d=>d.from||d.to),
+        specialNote:gv('specialNote'),construction:clTogs.construction||'',constructionMemo:gv('constructionMemo'),
+        supplierSign:gv('supplierSign'),customerSign:gv('customerSign'),finalMemo:gv('finalMemo'),
+        createdAt:new Date().toISOString(),status:clTogs.construction==='공사 진행 가능'?'completed':'pending'
+    };
+    DB.add('checklists',record);
+    closeClModal();showToast('실측 기록이 저장되었습니다');render('checklist');
+}
+
+function viewChecklist(clId){
+    const c=DB.getById('checklists',clId);
+    if(!c)return;
+    const rooms=(c.rooms||[]).map(r=>`<tr><td>${r.name}</td><td>${r.w}×${r.h}mm</td><td>${r.area}m²</td><td>${r.pyeong}평</td></tr>`).join('');
+    const dancha=(c.danchaData||[]).filter(d=>d.from||d.to).map(d=>`<tr><td>${d.from||'-'}</td><td>${d.to||'-'}</td><td>${d.method||'-'}</td></tr>`).join('');
+    const diagC=c.construction==='공사 진행 가능'?'tag-green':c.construction==='공사 진행 불가능'?'tag-red':'tag-orange';
+    document.getElementById('clViewContent').innerHTML=`
+    <div style="background:#35C5F0;color:white;padding:16px;border-radius:10px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:16px;font-weight:700">${c.companyName||''}</div><div style="font-size:12px;opacity:.8">${c.address||''}</div></div><div style="text-align:right"><div style="font-size:24px;font-weight:700">${c.neededPyeong||'-'}</div><div style="font-size:11px;opacity:.8">필요 평수</div></div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">${[['실측일',c.measureDate],['시공예정',c.constructDate||'-'],['담당자',c.manager||'-'],['총면적',`${c.totalAreaM2||0}m² / ${c.totalPyeong||0}평`]].map(([l,v])=>`<div style="background:#F7F8FA;border-radius:8px;padding:10px"><div style="font-size:10px;color:#8B95A1;font-weight:600">${l}</div><div style="font-size:13px;font-weight:600;margin-top:2px">${v}</div></div>`).join('')}</div>
+    <div style="font-size:12px;font-weight:700;color:#0077B6;background:#E8F4FD;padding:6px 12px;border-left:3px solid #35C5F0;border-radius:0 6px 6px 0;margin:12px 0 8px">자재 정보</div>
+    <table class="tbl"><tr><th>제조사</th><th>제품명</th><th>규격</th><th>색상</th></tr><tr><td>${c.maker||'-'}</td><td>${c.product||'-'}</td><td>${c.productSpec||'-'}</td><td>${c.productColor||'-'}</td></tr></table>
+    <div style="font-size:12px;font-weight:700;color:#0077B6;background:#E8F4FD;padding:6px 12px;border-left:3px solid #35C5F0;border-radius:0 6px 6px 0;margin:12px 0 8px">실측 입력</div>
+    <table class="tbl"><tr><th>공간</th><th>치수</th><th>m²</th><th>평</th></tr>${rooms}</table>
+    <div style="font-size:12px;font-weight:700;color:#0077B6;background:#E8F4FD;padding:6px 12px;border-left:3px solid #35C5F0;border-radius:0 6px 6px 0;margin:12px 0 8px">체크리스트</div>
+    <table class="tbl"><tr><th>항목</th><th>결과</th><th>항목</th><th>결과</th></tr>
+    <tr><td>차량등록</td><td>${c.carReg||'-'}</td><td>주차</td><td>${c.parking||'-'}</td></tr>
+    <tr><td>엘리베이터</td><td>${c.elevator||'-'}</td><td>입차시간</td><td>${c.entryTime||'-'}</td></tr>
+    <tr><td>걸레받이</td><td>${c.baseboard||'-'}</td><td>바닥상태</td><td>${c.floorStatus||'-'}</td></tr>
+    <tr><td>함수율</td><td>${c.moisture||'-'}%</td><td>보양</td><td>${c.protection||'-'}</td></tr>
+    <tr><td>시공방향</td><td>${c.direction||'-'}</td><td>실리콘</td><td>${c.siliconColor||'-'}</td></tr>
+    <tr><td>주방하부</td><td>${c.kitchenBase||'-'}</td><td>누수</td><td>${c.leakCheck||'-'}</td></tr></table>
+    ${dancha?`<div style="font-size:12px;font-weight:700;color:#0077B6;background:#E8F4FD;padding:6px 12px;border-left:3px solid #35C5F0;border-radius:0 6px 6px 0;margin:12px 0 8px">단차 마감</div><table class="tbl"><tr><th>위치</th><th>상대위치</th><th>마감방식</th></tr>${dancha}</table>`:''}
+    ${c.specialNote?`<div style="font-size:12px;font-weight:700;color:#0077B6;background:#E8F4FD;padding:6px 12px;border-left:3px solid #35C5F0;border-radius:0 6px 6px 0;margin:12px 0 8px">현장 진단</div><div style="background:#F7F8FA;border:1px solid #E5E8EB;border-radius:8px;padding:12px;font-size:12px;line-height:1.7">${c.specialNote}</div>`:''}
+    <div style="padding:12px 0"><span class="tag ${diagC}" style="font-size:13px;padding:6px 14px">${c.construction||'-'}</span>${c.constructionMemo?`<span style="font-size:12px;color:#6B7684;margin-left:8px">${c.constructionMemo}</span>`:''}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">${[['공급사 담당자',c.supplierSign],['고객',c.customerSign]].map(([l,v])=>`<div style="border:1.5px solid #E5E8EB;border-radius:8px;padding:12px"><div style="font-size:10px;color:#8B95A1">${l}</div><div style="font-size:15px;font-weight:700;margin-top:4px">${v||'-'}</div></div>`).join('')}</div>`;
+    document.getElementById('clViewModal').classList.add('show');
+}
+function closeClView(){document.getElementById('clViewModal').classList.remove('show');}
+
 // ===== 현장 상세 =====
 function openJobDetail(jobId){
     const j=DB.getById('jobs',jobId);

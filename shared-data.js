@@ -31,7 +31,7 @@ const DB = {
     init() {
         initFirebase();
         // Load all collections and listen for changes
-        const collections = ['accounts','companies','workers','jobs','asTickets','feedback','notifications'];
+        const collections = ['accounts','companies','workers','jobs','asTickets','feedback','notifications','checklists'];
         let loaded = 0;
         collections.forEach(key => {
             const ref = firebaseDb.ref(key);
@@ -66,6 +66,7 @@ const DB = {
         await firebaseDb.ref('asTickets').set(this._arrayToObj(DEFAULT_AS));
         await firebaseDb.ref('feedback').set(this._arrayToObj(DEFAULT_FEEDBACK));
         await firebaseDb.ref('notifications').set(this._arrayToObj(DEFAULT_NOTIFICATIONS));
+        await firebaseDb.ref('checklists').set(this._arrayToObj(DEFAULT_CHECKLISTS));
         console.log('Seed complete.');
     },
 
@@ -100,7 +101,7 @@ const DB = {
 
     // Compat: listenSync (no-op, firebase handles it)
     listenSync(callback) {
-        ['jobs','asTickets','feedback','notifications','companies'].forEach(key => {
+        ['jobs','asTickets','feedback','notifications','companies','checklists'].forEach(key => {
             this.onChange(key, () => callback(key, 'sync', null));
         });
     },
@@ -304,6 +305,15 @@ const AS_CODES = {
     '철거':[{code:'DM-01',name:'잔재물 미처리'},{code:'DM-02',name:'주변 손상'}],
 };
 
+// 실측 체크리스트 샘플 데이터
+const DEFAULT_CHECKLISTS = [
+    {id:'CL-001',companyId:'comp-003',companyName:'영진테크',manager:'최종기',measureDate:'2026-03-25',constructDate:'2026-04-05',address:'서울 강남구 대치동 래미안 1단지 102동 1501호',sitePassword:'1234#',carReg:'필요',parking:'가능',elevator:'가능',entryTime:'08:00',workEndTime:'17:00',maker:'구정',product:'구정강(스탠다드)',productSpec:'7.5Tx94x800',productColor:'아이보리 화이트',totalAreaM2:62.5,totalPyeong:'18.90',neededPyeong:'20.79',rooms:[{name:'거실',w:6000,h:4500,area:'27.00',pyeong:'8.17'},{name:'방1',w:3600,h:3200,area:'11.52',pyeong:'3.48'},{name:'방2',w:3200,h:3000,area:'9.60',pyeong:'2.90'},{name:'주방',w:3500,h:2800,area:'9.80',pyeong:'2.96'},{name:'복도',w:4600,h:1000,area:'4.60',pyeong:'1.39'}],baseboard:'선시공',floorStatus:'양호',floorDetail:'',moisture:'4.2',protection:'시공',protectionDetail:'거실+복도',direction:'정방향',directionMemo:'',siliconColor:'반투명',kitchenBase:'시공',kitchenMemo:'',leakCheck:'이상없음',leakMemo:'',danchaData:[{from:'현관',to:'거실',method:'프로파일 마감'}],specialNote:'전체적으로 양호한 현장',construction:'공사 진행 가능',constructionMemo:'',supplierSign:'최종기',customerSign:'김OO',finalMemo:'',createdAt:'2026-03-25T10:30:00',status:'completed'},
+    {id:'CL-002',companyId:'comp-003',companyName:'영진테크',manager:'한갑기',measureDate:'2026-03-27',constructDate:'2026-04-08',address:'경기 성남시 분당구 정자동 힐스테이트 203동 802호',sitePassword:'*9876',carReg:'불필요',parking:'가능',elevator:'가능',entryTime:'09:00',workEndTime:'17:00',maker:'동화',product:'듀오 텍스쳐',productSpec:'10.5Tx163x1200',productColor:'까사 화이트',totalAreaM2:78.3,totalPyeong:'23.69',neededPyeong:'26.06',rooms:[{name:'거실',w:7200,h:5000,area:'36.00',pyeong:'10.89'},{name:'방1',w:4000,h:3500,area:'14.00',pyeong:'4.23'},{name:'방2',w:3500,h:3200,area:'11.20',pyeong:'3.39'},{name:'방3',w:3000,h:2800,area:'8.40',pyeong:'2.54'},{name:'주방',w:3200,h:2700,area:'8.64',pyeong:'2.61'}],baseboard:'후시공',floorStatus:'미흡',floorDetail:'거실 일부 레벨링 필요',moisture:'6.8',protection:'시공',protectionDetail:'전체',direction:'정방향',directionMemo:'',siliconColor:'백색',kitchenBase:'시공',kitchenMemo:'싱크대 하부 확인 필요',leakCheck:'이상없음',leakMemo:'',danchaData:[{from:'현관',to:'복도',method:'프로파일 마감'},{from:'발코니',to:'거실',method:'실리콘 마감'}],specialNote:'거실 바닥 레벨링 일부 필요, 입주 전 공사 가능',construction:'협의 필요',constructionMemo:'레벨링 추가 비용 협의',supplierSign:'한갑기',customerSign:'이OO',finalMemo:'레벨링 후 시공 진행 예정',createdAt:'2026-03-27T14:00:00',status:'completed'},
+    {id:'CL-003',companyId:'comp-003',companyName:'영진테크',manager:'최종기',measureDate:'2026-03-28',constructDate:'2026-04-10',address:'서울 송파구 잠실동 엘스 105동 2203호',sitePassword:'',carReg:'필요',parking:'불가능',elevator:'가능',entryTime:'09:00',workEndTime:'16:00',maker:'한솔',product:'SB마루 강 우드 165',productSpec:'7.5Tx165x1205',productColor:'데이화이트',totalAreaM2:55.2,totalPyeong:'16.70',neededPyeong:'18.37',rooms:[{name:'거실',w:5500,h:4200,area:'23.10',pyeong:'6.99'},{name:'방1',w:3500,h:3000,area:'10.50',pyeong:'3.18'},{name:'방2',w:3200,h:2800,area:'8.96',pyeong:'2.71'},{name:'주방',w:3000,h:2500,area:'7.50',pyeong:'2.27'},{name:'복도',w:5200,h:1000,area:'5.20',pyeong:'1.57'}],baseboard:'선시공',floorStatus:'양호',floorDetail:'',moisture:'3.5',protection:'미시공',protectionDetail:'',direction:'역방향',directionMemo:'현관 방향 기준',siliconColor:'반투명',kitchenBase:'미시공',kitchenMemo:'',leakCheck:'이상없음',leakMemo:'',danchaData:[{from:'현관',to:'거실',method:'1:1 시공'}],specialNote:'깔끔한 현장, 특이사항 없음',construction:'공사 진행 가능',constructionMemo:'',supplierSign:'최종기',customerSign:'박OO',finalMemo:'',createdAt:'2026-03-28T11:00:00',status:'completed'},
+    {id:'CL-004',companyId:'comp-003',companyName:'영진테크',manager:'한갑기',measureDate:'2026-03-30',constructDate:'',address:'서울 마포구 연남동 연남빌라 301호',sitePassword:'#1004',carReg:'불필요',parking:'불가능',elevator:'불가능',entryTime:'10:00',workEndTime:'17:00',maker:'LX지인',product:'에디톤',productSpec:'5Tx180x1220',productColor:'클린 애쉬',totalAreaM2:42.8,totalPyeong:'12.95',neededPyeong:'14.25',rooms:[{name:'거실',w:4500,h:3800,area:'17.10',pyeong:'5.17'},{name:'방1',w:3200,h:3000,area:'9.60',pyeong:'2.90'},{name:'방2',w:3000,h:2800,area:'8.40',pyeong:'2.54'},{name:'주방',w:2800,h:2400,area:'6.72',pyeong:'2.03'}],baseboard:'협의예정',floorStatus:'미흡',floorDetail:'전체적 레벨링 필요, 오래된 장판 철거 필요',moisture:'9.2',protection:'시공',protectionDetail:'전체 보양',direction:'당일협의',directionMemo:'',siliconColor:'백색',kitchenBase:'확인필요',kitchenMemo:'싱크대 이동 예정',leakCheck:'누수있음',leakMemo:'화장실 옆 벽면 미세 누수 확인',danchaData:[{from:'현관',to:'거실',method:'프로파일 마감'},{from:'화장실',to:'복도',method:'실리콘 마감'}],specialNote:'함수율 높음(9.2%), 누수 확인 → 배관 점검 후 시공 가능 여부 재확인 필요',construction:'공사 진행 불가능',constructionMemo:'누수 해결 후 재실측 필요',supplierSign:'한갑기',customerSign:'',finalMemo:'배관 수리 후 재방문 예정',createdAt:'2026-03-30T15:30:00',status:'pending'},
+    {id:'CL-005',companyId:'comp-003',companyName:'영진테크',manager:'최종기',measureDate:'2026-03-31',constructDate:'2026-04-12',address:'경기 용인시 수지구 죽전동 e편한세상 401동 1102호',sitePassword:'',carReg:'필요',parking:'가능',elevator:'가능',entryTime:'08:30',workEndTime:'17:00',maker:'노바',product:'블랙라벨',productSpec:'7.5Tx165x1200',productColor:'블랑',totalAreaM2:85.6,totalPyeong:'25.89',neededPyeong:'28.48',rooms:[{name:'거실',w:8000,h:5500,area:'44.00',pyeong:'13.31'},{name:'방1',w:4200,h:3500,area:'14.70',pyeong:'4.45'},{name:'방2',w:3800,h:3200,area:'12.16',pyeong:'3.68'},{name:'방3',w:3000,h:2800,area:'8.40',pyeong:'2.54'},{name:'주방',w:3200,h:2000,area:'6.40',pyeong:'1.94'}],baseboard:'선시공',floorStatus:'양호',floorDetail:'',moisture:'3.8',protection:'시공',protectionDetail:'거실+복도+주방',direction:'정방향',directionMemo:'',siliconColor:'골색',kitchenBase:'시공',kitchenMemo:'',leakCheck:'이상없음',leakMemo:'',danchaData:[{from:'현관',to:'복도',method:'프로파일 마감'}],specialNote:'넓은 현장, 상태 양호',construction:'공사 진행 가능',constructionMemo:'',supplierSign:'최종기',customerSign:'정OO',finalMemo:'4/12 시공 확정',createdAt:'2026-03-31T09:00:00',status:'completed'},
+];
+
 const HELPERS = {
     formatDate(d) { if(!d)return'—';const dt=new Date(d);return`${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`; },
     formatDateTime(d) { if(!d)return'—';const dt=new Date(d);return`${this.formatDate(d)} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`; },
@@ -331,5 +341,19 @@ const HELPERS = {
         const fb=DB.getAll('feedback').filter(f=>f.workerId===wid);
         const avg=fb.length?(fb.reduce((s,f)=>s+f.rating,0)/fb.length).toFixed(1):'—';
         return{monthlyJobs:jobs.length,monthlyDone:d.length,rate:jobs.length?Math.round(d.length/jobs.length*1000)/10:0,asCount:as.length,avgRating:avg};
+    },
+    checklistStats(cid) {
+        const all=DB.getAll('checklists').filter(c=>!cid||c.companyId===cid);
+        const month=all.filter(c=>c.measureDate?.startsWith('2026-03'));
+        const ok=all.filter(c=>c.construction==='공사 진행 가능').length;
+        const ng=all.filter(c=>c.construction==='공사 진행 불가능').length;
+        const hold=all.filter(c=>c.construction==='협의 필요').length;
+        const leak=all.filter(c=>c.leakCheck==='누수있음').length;
+        const floorBad=all.filter(c=>c.floorStatus==='미흡').length;
+        const areas=all.map(c=>parseFloat(c.totalAreaM2)||0).filter(v=>v>0);
+        const avgArea=areas.length?Math.round(areas.reduce((a,b)=>a+b,0)/areas.length*10)/10:0;
+        const moists=all.map(c=>parseFloat(c.moisture)||0).filter(v=>v>0);
+        const avgMoist=moists.length?(moists.reduce((a,b)=>a+b,0)/moists.length).toFixed(1):'—';
+        return{total:all.length,monthly:month.length,ok,ng,hold,leak,floorBad,avgArea,avgMoist};
     }
 };
