@@ -127,6 +127,8 @@
         <div class="nav-item" onclick="go('category',this)"><span class="ico">📁</span> 카테고리별</div>
         <div class="nav-item" onclick="go('as',this)"><span class="ico">🔧</span> AS 통합현황</div>
         <div class="nav-item" onclick="go('alerts',this)"><span class="ico">🔔</span> 알림/이상감지</div>
+        <div class="nav-group">실측</div>
+        <div class="nav-item" onclick="go('clAll',this)"><span class="ico">📋</span> 실측 전체현황</div>
         <div class="nav-group">분석</div>
         <div class="nav-item" onclick="go('performance',this)"><span class="ico">📈</span> 성과 분석</div>
         <div class="nav-group">운영</div>
@@ -150,7 +152,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="shared-data.js"></script>
 <script>
-const titles={home:'전체 대시보드',companies:'테크사 관리',category:'카테고리별 분석',as:'AS 통합현황',alerts:'알림/이상감지',performance:'성과 분석',accounts:'계정/권한'};
+const titles={home:'전체 대시보드',companies:'테크사 관리',category:'카테고리별 분석',as:'AS 통합현황',alerts:'알림/이상감지',clAll:'실측 전체현황',performance:'성과 분석',accounts:'계정/권한'};
 let charts={},calState={year:2026,month:2,selectedDate:'2026-03-31'},currentPage='home';
 
 // Firebase init
@@ -262,6 +264,27 @@ function render(p){
         area.innerHTML=`<div class="card"><div class="card-h"><div class="card-t">관리 계정</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>회사</th><th>아이디</th><th>이름</th><th>권한</th><th>상태</th></tr></thead><tbody>${mRows}</tbody></table></div></div>
         <div class="card"><div class="card-h"><div class="card-t">시공자 계정</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>회사</th><th>아이디</th><th>이름</th><th>권한</th><th>상태</th></tr></thead><tbody>${wRows}</tbody></table></div></div>
         <div class="card"><div class="card-h"><div class="card-t">권한 체계</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>권한</th><th>자사 데이터</th><th>타사 데이터</th><th>전체 통계</th><th>계정 관리</th></tr></thead><tbody><tr><td><span class="tag tag-purple">관리자</span></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr><tr><td><span class="tag tag-blue">테크사</span></td><td>✅</td><td>❌</td><td>❌</td><td>자사만</td></tr><tr><td><span class="tag tag-gray">시공자</span></td><td>본인만</td><td>❌</td><td>❌</td><td>❌</td></tr></tbody></table></div></div>`;
+    } else if(p==='clAll'){
+        const cls=DB.getAll('checklists').sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+        const cs=HELPERS.checklistStats();
+        // 테크사별 실측 현황
+        const byComp={};cls.forEach(c=>{const n=c.companyName||'미입력';if(!byComp[n])byComp[n]={total:0,ok:0,ng:0,hold:0,leak:0};byComp[n].total++;if(c.construction==='공사 진행 가능')byComp[n].ok++;if(c.construction==='공사 진행 불가능')byComp[n].ng++;if(c.construction==='협의 필요')byComp[n].hold++;if(c.leakCheck==='누수있음')byComp[n].leak++;});
+        const compRows=Object.entries(byComp).sort((a,b)=>b[1].total-a[1].total).map(([n,s])=>`<tr><td style="font-weight:600">${n}</td><td class="r"><b>${s.total}</b></td><td class="r"><span class="up">${s.ok}</span></td><td class="r"><span class="warn">${s.hold}</span></td><td class="r"><span class="down">${s.ng}</span></td><td class="r">${s.leak?'<span class="down">'+s.leak+'</span>':'-'}</td><td class="r">${s.total?Math.round(s.ok/s.total*100):0}%</td></tr>`).join('');
+        // 전체 목록
+        const listRows=cls.map(c=>{
+            const diagC=c.construction==='공사 진행 가능'?'tag-green':c.construction==='공사 진행 불가능'?'tag-red':'tag-orange';
+            const leakC=c.leakCheck==='이상없음'?'tag-green':c.leakCheck==='누수있음'?'tag-red':'tag-gray';
+            return `<tr><td style="font-size:11px;color:#8B95A1">${c.measureDate||'-'}</td><td style="font-weight:600">${c.companyName||'-'}</td><td>${c.manager||'-'}</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.address||'-'}</td><td><span class="tag tag-blue">${c.maker||'-'}</span></td><td style="font-weight:600">${c.product||'-'}</td><td class="r"><b>${c.totalPyeong||0}</b>평</td><td><span class="tag ${leakC}">${c.leakCheck||'-'}</span></td><td>${c.moisture||'-'}%</td><td><span class="tag ${diagC}">${c.construction||'-'}</span></td></tr>`;
+        }).join('');
+        area.innerHTML=`
+        <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">총 실측</div><div class="kpi-icon" style="background:#E8F4FD;color:#0077B6">📋</div></div><div class="kpi-value">${cs.total} <span>건</span></div><div class="kpi-sub">이번달 ${cs.monthly}건</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">시공 가능</div><div class="kpi-icon" style="background:#E8F8EF;color:#00875A">✅</div></div><div class="kpi-value">${cs.ok} <span>건</span></div><div class="kpi-sub">${cs.total?Math.round(cs.ok/cs.total*100):0}% · 협의 ${cs.hold} · 불가 ${cs.ng}</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">주의 현장</div><div class="kpi-icon" style="background:#FFEEF0;color:#F04452">⚠️</div></div><div class="kpi-value">${cs.leak+cs.floorBad} <span>건</span></div><div class="kpi-sub">누수 ${cs.leak} · 바닥미흡 ${cs.floorBad}</div></div>
+            <div class="kpi"><div class="kpi-top"><div class="kpi-label">평균 면적</div><div class="kpi-icon" style="background:#F3EAFF;color:#6B21A8">📐</div></div><div class="kpi-value">${cs.avgArea} <span>m²</span></div><div class="kpi-sub">함수율 평균 ${cs.avgMoist}%</div></div>
+        </div>
+        <div class="card"><div class="card-h"><div class="card-t">테크사별 실측 현황</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>테크사</th><th class="r">총건수</th><th class="r">시공가능</th><th class="r">협의</th><th class="r">불가</th><th class="r">누수</th><th class="r">가능률</th></tr></thead><tbody>${compRows}</tbody></table></div></div>
+        <div class="card"><div class="card-h"><div class="card-t">전체 실측 목록</div><div class="card-sub">${cls.length}건</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>실측일</th><th>테크사</th><th>담당자</th><th>현장주소</th><th>제조사</th><th>제품</th><th class="r">면적</th><th>누수</th><th>함수율</th><th>공사진행</th></tr></thead><tbody>${listRows}</tbody></table></div></div>`;
     }
 }
 DB.listenSync(()=>{render(currentPage)});
