@@ -156,6 +156,35 @@
         @media(max-width:1400px){.kpi-grid-6{grid-template-columns:repeat(3,1fr)}}
         @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.kpi-grid-6{grid-template-columns:repeat(2,1fr)}.grid-2,.grid-6-4{grid-template-columns:1fr}}
         @media(max-width:768px){.sidebar{display:none}.main-wrap{margin-left:0}}
+        .chat-container{display:flex;flex-direction:column;height:calc(100vh - 100px);max-height:700px;background:#fff;border-radius:12px;border:1px solid #E5E8EB;overflow:hidden}
+        .chat-header{padding:16px 20px;border-bottom:1px solid #E5E8EB;display:flex;align-items:center;gap:10px;background:#FAFBFC}
+        .chat-header-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#35C5F0,#0077B6);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}
+        .chat-header-info{flex:1}.chat-header-name{font-size:14px;font-weight:700}.chat-header-desc{font-size:11px;color:#8B95A1}
+        .chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+        .chat-msg{display:flex;gap:10px;max-width:85%}
+        .chat-msg.bot{align-self:flex-start}.chat-msg.user{align-self:flex-end;flex-direction:row-reverse}
+        .chat-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+        .chat-msg.bot .chat-avatar{background:linear-gradient(135deg,#35C5F0,#0077B6);color:#fff}
+        .chat-msg.user .chat-avatar{background:#191F28;color:#fff}
+        .chat-bubble{padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;word-break:break-word}
+        .chat-msg.bot .chat-bubble{background:#F2F4F6;color:#191F28;border-top-left-radius:4px}
+        .chat-msg.user .chat-bubble{background:#35C5F0;color:#fff;border-top-right-radius:4px}
+        .chat-bubble table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+        .chat-bubble th,.chat-bubble td{padding:6px 8px;border:1px solid #E5E8EB;text-align:left}
+        .chat-bubble th{background:#FAFBFC;font-weight:600}
+        .chat-bubble strong{font-weight:700}.chat-bubble ul{margin:6px 0;padding-left:18px}
+        .chat-bubble li{margin-bottom:3px}
+        .chat-input-wrap{padding:14px 20px;border-top:1px solid #E5E8EB;display:flex;gap:10px;background:#fff}
+        .chat-input{flex:1;border:1px solid #E5E8EB;border-radius:10px;padding:10px 14px;font-size:13px;font-family:inherit;outline:none;resize:none;min-height:40px;max-height:100px}
+        .chat-input:focus{border-color:#35C5F0}
+        .chat-send{width:40px;height:40px;border-radius:10px;background:#35C5F0;color:#fff;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .chat-send:hover{background:#0077B6}
+        .chat-suggest{display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 14px}
+        .chat-suggest-btn{padding:6px 14px;border-radius:20px;border:1px solid #E5E8EB;background:#fff;font-size:12px;color:#4E5968;cursor:pointer;font-family:inherit;transition:all .15s}
+        .chat-suggest-btn:hover{border-color:#35C5F0;color:#35C5F0;background:#E8F4FD}
+        .chat-typing{display:flex;gap:4px;padding:4px 0}.chat-typing span{width:6px;height:6px;border-radius:50%;background:#8B95A1;animation:chatBounce .6s infinite alternate}
+        .chat-typing span:nth-child(2){animation-delay:.2s}.chat-typing span:nth-child(3){animation-delay:.4s}
+        @keyframes chatBounce{to{opacity:.3;transform:translateY(-4px)}}
     </style>
 </head>
 <body>
@@ -193,10 +222,12 @@
         <div class="nav-group">실측</div>
         <div class="nav-item" onclick="go('checklist',this)"><span class="ico">📋</span> 실측 체크리스트</div>
         <div class="nav-item" onclick="go('clDash',this)"><span class="ico">📊</span> 실측 현황</div>
+        <div class="nav-group">AI</div>
+        <div class="nav-item" onclick="go('chatbot',this)"><span class="ico">🤖</span> AI 어시스턴트</div>
         <div class="nav-group">설정</div>
         <div class="nav-item" onclick="go('settings',this)"><span class="ico">⚙️</span> 시공자 권한설정</div>
     </nav>
-    <div class="sidebar-footer">테크사 포털 v2.2</div>
+    <div class="sidebar-footer">테크사 포털 v2.3</div>
 </aside>
 
 <div class="main-wrap">
@@ -334,7 +365,7 @@
 <script src="shared-data.js"></script>
 <script>
 let currentUser=null, cid=null, charts={}, calState={year:2026,month:2,selectedDate:'2026-03-31'};
-const titles={home:'대시보드',workers:'시공자 관리',schedule:'일정 등록',history:'시공 이력',as:'AS 관리',checklist:'실측 체크리스트',clDash:'실측 현황',settings:'시공자 권한설정'};
+const titles={home:'대시보드',workers:'시공자 관리',schedule:'일정 등록',history:'시공 이력',as:'AS 관리',checklist:'실측 체크리스트',clDash:'실측 현황',chatbot:'AI 어시스턴트',settings:'시공자 권한설정'};
 
 DB.init();
 DB.seedIfEmpty();
@@ -641,6 +672,24 @@ function render(p){
         </div>`;
         // 체크리스트 URL 렌더
         renderChecklistSettings();
+    } else if(p==='chatbot'){
+        area.innerHTML=`
+        <div class="chat-container">
+            <div class="chat-header">
+                <div class="chat-header-icon">🤖</div>
+                <div class="chat-header-info">
+                    <div class="chat-header-name">AI 어시스턴트</div>
+                    <div class="chat-header-desc">시공 현황, AS, 시공자 정보 등을 질문해 보세요</div>
+                </div>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-suggest" id="chatSuggest"></div>
+            <div class="chat-input-wrap">
+                <textarea class="chat-input" id="chatInput" placeholder="질문을 입력하세요..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+                <button class="chat-send" onclick="sendChat()">➤</button>
+            </div>
+        </div>`;
+        initChatbot();
     } else if(p==='checklist'){
         // 실측 체크리스트 입력 폼
         const cls=DB.getAll('checklists').filter(c=>c.companyId===cid).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
@@ -1059,6 +1108,208 @@ function submitAS(){
 }
 
 DB.listenSync(()=>{render(currentPage)});
+
+// ===== AI 챗봇 =====
+let chatHistory=[];
+const SUGGESTIONS=['이번달 시공 현황 알려줘','AS 현황 요약해줘','시공자 목록 보여줘','완료율이 어떻게 돼?','오늘 일정 알려줘','자격증 만료 임박한 시공자는?','실측 현황 알려줘','AS 발생율은?'];
+
+function initChatbot(){
+    chatHistory=[];
+    const msgArea=document.getElementById('chatMessages');
+    msgArea.innerHTML='';
+    addBotMsg('안녕하세요! AI 어시스턴트입니다. 시공 현황, AS, 시공자 정보 등 궁금한 것을 물어보세요.');
+    renderSuggestions();
+}
+
+function renderSuggestions(){
+    const el=document.getElementById('chatSuggest');
+    if(!el)return;
+    const picks=SUGGESTIONS.sort(()=>Math.random()-.5).slice(0,4);
+    el.innerHTML=picks.map(s=>`<button class="chat-suggest-btn" onclick="askSuggestion('${s}')">${s}</button>`).join('');
+}
+
+function askSuggestion(q){
+    document.getElementById('chatInput').value=q;
+    sendChat();
+}
+
+function addBotMsg(html){
+    const msgArea=document.getElementById('chatMessages');
+    if(!msgArea)return;
+    const div=document.createElement('div');
+    div.className='chat-msg bot';
+    div.innerHTML=`<div class="chat-avatar">🤖</div><div class="chat-bubble">${html}</div>`;
+    msgArea.appendChild(div);
+    msgArea.scrollTop=msgArea.scrollHeight;
+}
+
+function addUserMsg(text){
+    const msgArea=document.getElementById('chatMessages');
+    if(!msgArea)return;
+    const div=document.createElement('div');
+    div.className='chat-msg user';
+    div.innerHTML=`<div class="chat-avatar">${currentUser?.avatar||'U'}</div><div class="chat-bubble">${text}</div>`;
+    msgArea.appendChild(div);
+    msgArea.scrollTop=msgArea.scrollHeight;
+}
+
+function showTyping(){
+    const msgArea=document.getElementById('chatMessages');
+    if(!msgArea)return;
+    const div=document.createElement('div');
+    div.className='chat-msg bot';div.id='chatTyping';
+    div.innerHTML=`<div class="chat-avatar">🤖</div><div class="chat-bubble"><div class="chat-typing"><span></span><span></span><span></span></div></div>`;
+    msgArea.appendChild(div);
+    msgArea.scrollTop=msgArea.scrollHeight;
+}
+function hideTyping(){const el=document.getElementById('chatTyping');if(el)el.remove();}
+
+function sendChat(){
+    const input=document.getElementById('chatInput');
+    const q=input.value.trim();
+    if(!q)return;
+    input.value='';
+    addUserMsg(q);
+    showTyping();
+    document.getElementById('chatSuggest').innerHTML='';
+    setTimeout(()=>{
+        hideTyping();
+        const answer=processQuestion(q);
+        addBotMsg(answer);
+        renderSuggestions();
+    }, 400+Math.random()*400);
+}
+
+function processQuestion(q){
+    const ql=q.toLowerCase();
+    const jobs=DB.getAll('jobs').filter(j=>j.companyId===cid);
+    const wks=DB.getAll('workers').filter(w=>w.companyId===cid);
+    const as=DB.getAll('asTickets').filter(a=>a.companyId===cid);
+    const cls=DB.getAll('checklists').filter(c=>c.companyId===cid);
+    const comp=DB.getById('companies',cid);
+    const now='2026-03-31';
+    const thisMonth=jobs.filter(j=>j.date?.startsWith('2026-03'));
+    const todayJobs=jobs.filter(j=>j.date===now);
+    const monthAS=as.filter(a=>a.date?.startsWith('2026-03'));
+
+    // 오늘 일정
+    if(ql.includes('오늘')&&(ql.includes('일정')||ql.includes('시공')||ql.includes('스케줄'))){
+        if(!todayJobs.length) return '오늘(3/31) 예정된 시공 건이 없습니다.';
+        const done=todayJobs.filter(j=>j.status==='done').length;
+        const prog=todayJobs.filter(j=>j.status==='in_progress').length;
+        const wait=todayJobs.filter(j=>j.status==='waiting').length;
+        let rows=todayJobs.sort((a,b)=>a.time.localeCompare(b.time)).map(j=>{
+            const w=DB.getById('workers',j.workerId);
+            const st=j.status==='done'?'완료':j.status==='in_progress'?'진행중':'대기';
+            return `<tr><td>${j.time||'-'}</td><td>${j.customer||'-'}</td><td>${w?.name||'-'}</td><td>${st}</td></tr>`;
+        }).join('');
+        return `<strong>오늘(3/31) 시공 일정 — ${todayJobs.length}건</strong> (완료 ${done} / 진행 ${prog} / 대기 ${wait})<table><tr><th>시간</th><th>고객</th><th>시공자</th><th>상태</th></tr>${rows}</table>`;
+    }
+
+    // 이번달 시공 현황
+    if((ql.includes('이번달')||ql.includes('이번 달')||ql.includes('월'))&&(ql.includes('현황')||ql.includes('시공')||ql.includes('요약'))){
+        const done=thisMonth.filter(j=>j.status==='done').length;
+        const prog=thisMonth.filter(j=>j.status==='in_progress').length;
+        const wait=thisMonth.filter(j=>j.status==='waiting').length;
+        const rate=thisMonth.length?Math.round(done/thisMonth.length*100):0;
+        return `<strong>3월 시공 현황</strong><ul><li>전체: <strong>${thisMonth.length}건</strong></li><li>완료: ${done}건 / 진행: ${prog}건 / 대기: ${wait}건</li><li>완료율: <strong>${rate}%</strong></li><li>AS 요청: ${monthAS.length}건 (미처리 ${monthAS.filter(a=>a.status==='open').length}건)</li></ul>`;
+    }
+
+    // 완료율
+    if(ql.includes('완료율')||ql.includes('완료 율')){
+        const done=thisMonth.filter(j=>j.status==='done').length;
+        const rate=thisMonth.length?Math.round(done/thisMonth.length*100):0;
+        const prev=jobs.filter(j=>j.date?.startsWith('2026-02'));
+        const prevRate=prev.length?Math.round(prev.filter(j=>j.status==='done').length/prev.length*100):0;
+        const diff=rate-prevRate;
+        return `<strong>시공 완료율</strong><ul><li>3월: <strong>${rate}%</strong> (${done}/${thisMonth.length}건)</li><li>2월: ${prevRate}%</li><li>전월 대비: ${diff>=0?'+':''}${diff}%p</li></ul>${rate<85?'⚠️ 완료율이 85% 미만입니다. 지연 건을 확인해 주세요.':'✅ 양호한 수준입니다.'}`;
+    }
+
+    // AS 현황
+    if(ql.includes('as')||ql.includes('에이에스')||ql.includes('a/s')){
+        const open=monthAS.filter(a=>a.status==='open').length;
+        const prog=monthAS.filter(a=>a.status==='in_progress').length;
+        const resolved=monthAS.filter(a=>a.status==='resolved').length;
+        const asRate=thisMonth.length?((monthAS.length/thisMonth.length)*100).toFixed(1):0;
+        let catCount={};monthAS.forEach(a=>{catCount[a.cat]=(catCount[a.cat]||0)+1;});
+        let catStr=Object.entries(catCount).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`<li>${c}: ${n}건</li>`).join('');
+        return `<strong>3월 AS 현황 — ${monthAS.length}건</strong><ul><li>미처리(open): <strong>${open}건</strong></li><li>처리중: ${prog}건</li><li>해결: ${resolved}건</li><li>AS 발생율: <strong>${asRate}%</strong></li></ul>${catStr?'<strong>유형별:</strong><ul>'+catStr+'</ul>':''}${open>0?'⚠️ 미처리 AS '+open+'건이 있습니다.':'✅ 미처리 AS 없음'}`;
+    }
+
+    // 시공자 목록/관리
+    if(ql.includes('시공자')&&(ql.includes('목록')||ql.includes('리스트')||ql.includes('보여')||ql.includes('누구')||ql.includes('몇명')||ql.includes('현황'))){
+        if(!wks.length) return '등록된 시공자가 없습니다.';
+        let rows=wks.map(w=>{
+            const wJobs=jobs.filter(j=>j.workerId===w.id&&j.date?.startsWith('2026-03'));
+            const done=wJobs.filter(j=>j.status==='done').length;
+            return `<tr><td>${w.name}</td><td>${w.specialty||'-'}</td><td>${wJobs.length}건</td><td>${done}건</td></tr>`;
+        }).join('');
+        return `<strong>시공자 목록 — ${wks.length}명</strong><table><tr><th>이름</th><th>전문분야</th><th>3월 배정</th><th>완료</th></tr>${rows}</table>`;
+    }
+
+    // 자격증 만료
+    if(ql.includes('자격증')||ql.includes('만료')||ql.includes('갱신')){
+        const warns=wks.filter(w=>w.certs?.some(c=>HELPERS.certStatus(c.expiry).days<90));
+        if(!warns.length) return '✅ 90일 이내 만료 예정 자격증이 없습니다.';
+        let rows=warns.map(w=>{
+            const expCerts=w.certs.filter(c=>HELPERS.certStatus(c.expiry).days<90);
+            return expCerts.map(c=>{
+                const s=HELPERS.certStatus(c.expiry);
+                const tag=s.days<0?'만료됨':s.days<30?'⚠️ '+s.days+'일 남음':s.days+'일 남음';
+                return `<tr><td>${w.name}</td><td>${c.name}</td><td>${c.expiry}</td><td>${tag}</td></tr>`;
+            }).join('');
+        }).join('');
+        return `<strong>자격증 만료 임박</strong><table><tr><th>시공자</th><th>자격증</th><th>만료일</th><th>상태</th></tr>${rows}</table>`;
+    }
+
+    // 실측 현황
+    if(ql.includes('실측')){
+        if(!cls.length) return '등록된 실측 데이터가 없습니다.';
+        const ok=cls.filter(c=>c.construction==='공사 진행 가능').length;
+        const hold=cls.filter(c=>c.construction==='협의 필요').length;
+        const ng=cls.filter(c=>c.construction==='공사 진행 불가능').length;
+        const areas=cls.filter(c=>c.totalArea).map(c=>parseFloat(c.totalArea));
+        const avgArea=areas.length?Math.round(areas.reduce((a,b)=>a+b,0)/areas.length):0;
+        return `<strong>실측 현황 — ${cls.length}건</strong><ul><li>시공 가능: ${ok}건</li><li>협의 필요: ${hold}건</li><li>시공 불가: ${ng}건</li><li>평균 면적: ${avgArea}m²</li></ul>`;
+    }
+
+    // 특정 시공자 검색
+    const workerMatch=wks.find(w=>ql.includes(w.name));
+    if(workerMatch){
+        const w=workerMatch;
+        const wJobs=jobs.filter(j=>j.workerId===w.id);
+        const mJobs=wJobs.filter(j=>j.date?.startsWith('2026-03'));
+        const done=mJobs.filter(j=>j.status==='done').length;
+        const wAS=as.filter(a=>a.workerId===w.id);
+        let certInfo=w.certs?.map(c=>`${c.name} (${c.expiry})`).join(', ')||'없음';
+        return `<strong>${w.name} 상세정보</strong><ul><li>전문분야: ${w.specialty||'-'}</li><li>연락처: ${w.phone||'-'}</li><li>3월 배정: ${mJobs.length}건 (완료 ${done}건)</li><li>전체 AS: ${wAS.length}건</li><li>자격증: ${certInfo}</li></ul>`;
+    }
+
+    // 지연 / 미완료
+    if(ql.includes('지연')||ql.includes('미완료')||ql.includes('안끝')){
+        const overdue=jobs.filter(j=>j.date<now&&j.status!=='done'&&j.companyId===cid);
+        if(!overdue.length) return '✅ 지연된 시공 건이 없습니다.';
+        let rows=overdue.slice(0,10).map(j=>{
+            const w=DB.getById('workers',j.workerId);
+            return `<tr><td>${j.date}</td><td>${j.customer||'-'}</td><td>${w?.name||'-'}</td><td>${j.status==='waiting'?'대기':'진행중'}</td></tr>`;
+        }).join('');
+        return `<strong>지연 시공 건 — ${overdue.length}건</strong><table><tr><th>예정일</th><th>고객</th><th>시공자</th><th>상태</th></tr>${rows}</table>`;
+    }
+
+    // 통계 / KPI
+    if(ql.includes('통계')||ql.includes('kpi')||ql.includes('성과')||ql.includes('리포트')){
+        const st=HELPERS.companyStats(cid);
+        return `<strong>${comp?.name||'우리 회사'} KPI 요약</strong><ul><li>3월 시공: ${st.totalJobs}건 (완료 ${st.doneJobs}건)</li><li>완료율: ${st.completionRate}%</li><li>AS 요청: ${st.asTotal}건 (발생율 ${st.asRate}%)</li><li>미처리 AS: ${st.asOpen}건</li><li>시공자: ${wks.length}명</li></ul>`;
+    }
+
+    // 도움말
+    if(ql.includes('도움')||ql.includes('뭐 물어')||ql.includes('할 수 있')||ql.includes('help')){
+        return `다음과 같은 질문에 답변할 수 있습니다:<ul><li>📊 <strong>시공 현황</strong> — "이번달 시공 현황", "완료율"</li><li>📅 <strong>일정</strong> — "오늘 일정 알려줘"</li><li>🔧 <strong>AS</strong> — "AS 현황 요약해줘", "미처리 AS"</li><li>👷 <strong>시공자</strong> — "시공자 목록", "송민재 정보"</li><li>📋 <strong>실측</strong> — "실측 현황 알려줘"</li><li>🏷 <strong>자격증</strong> — "만료 임박 자격증"</li><li>⏰ <strong>지연</strong> — "지연 건 확인"</li><li>📈 <strong>KPI</strong> — "통계 보여줘"</li></ul>`;
+    }
+
+    // fallback
+    return `죄송합니다, 질문을 정확히 이해하지 못했습니다. 다음과 같이 질문해 보세요:<ul><li>"이번달 시공 현황 알려줘"</li><li>"AS 현황 요약해줘"</li><li>"시공자 목록 보여줘"</li><li>"오늘 일정 알려줘"</li></ul>또는 <strong>"도움말"</strong>을 입력해 전체 기능을 확인하세요.`;
+}
 </script>
 </body>
 </html>
